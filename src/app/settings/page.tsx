@@ -17,18 +17,34 @@ export default function SettingsPage() {
     }
 
     // Creating a CSV blob as a light spreadsheet export
-    const headers = ["Date", "Implement", "Engine Hours", "Acres", "Revenue", "Fuel Cost", "Labor Cost", "Repair Cost", "Net Profit", "Cost/Acre"];
+    const headers = [
+      "Date", 
+      "Implement", 
+      "Engine Hours", 
+      "Acres", 
+      "Cost/Acre (KSh)", 
+      "Total Revenue (KSh)", 
+      "Amount Paid (KSh)", 
+      "M-Pesa Code", 
+      "Fuel Cost (KSh)", 
+      "Labor Cost (KSh)", 
+      "Repair Cost (KSh)", 
+      "Net Profit (KSh)"
+    ];
+    
     const rows = operations.map(op => [
       op.date,
       op.implement,
       op.engineHours,
-      op.acres,
+      op.acres.toFixed(2),
+      op.costPerAcre,
       op.revenue,
+      op.amountPaid,
+      op.mpesaCode,
       op.fuelCost,
       op.laborCost,
       op.repairCost,
-      op.netProfit,
-      op.costPerAcre
+      op.netProfit
     ]);
 
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -86,7 +102,7 @@ export default function SettingsPage() {
               <Database className="w-5 h-5" />
               Offline Storage
             </CardTitle>
-            <CardDescription>Your data is stored locally on this device.</CardDescription>
+            <CardDescription>Your data is stored locally on this device (KSh format).</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
@@ -125,7 +141,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="text-center pt-8 opacity-40">
-        <p className="text-xs uppercase tracking-widest font-bold">Tractor Ledger Pro v1.0.0</p>
+        <p className="text-xs uppercase tracking-widest font-bold">Tractor Ledger Pro v1.1.0 (Kenya Edition)</p>
         <p className="text-[10px] mt-1">Designed for professional agricultural management.</p>
       </div>
     </div>

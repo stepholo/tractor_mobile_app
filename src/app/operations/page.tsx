@@ -11,8 +11,7 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
-  DialogFooter
+  DialogTrigger
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit2, Search, Filter } from "lucide-react";
 import { format } from "date-fns";
@@ -33,11 +32,12 @@ export default function OperationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingOp, setEditingOp] = useState<Operation | null>(null);
 
-  if (!isLoaded) return <div className="p-8 font-headline">Loading operations...</div>;
+  if (!isLoaded) return <div className="p-8 font-headline text-center">Loading operations...</div>;
 
   const filteredOps = operations.filter(op => 
     op.implement.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    op.date.includes(searchQuery)
+    op.date.includes(searchQuery) ||
+    op.mpesaCode.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -52,7 +52,9 @@ export default function OperationsPage() {
       repairCost: parseFloat(formData.get("repairCost") as string),
       implement: formData.get("implement") as string,
       acres: parseFloat(formData.get("acres") as string),
-      revenue: parseFloat(formData.get("revenue") as string),
+      costPerAcre: parseFloat(formData.get("costPerAcre") as string),
+      amountPaid: parseFloat(formData.get("amountPaid") as string),
+      mpesaCode: formData.get("mpesaCode") as string,
     };
 
     if (editingOp) {
@@ -100,23 +102,31 @@ export default function OperationsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="acres">Acres Completed</Label>
-                <Input type="number" step="0.1" id="acres" name="acres" placeholder="0.0" required />
+                <Input type="number" step="0.01" id="acres" name="acres" placeholder="0.00" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="revenue">Revenue ($)</Label>
-                <Input type="number" step="0.01" id="revenue" name="revenue" placeholder="0.00" required />
+                <Label htmlFor="costPerAcre">Cost Per Acre (KSh)</Label>
+                <Input type="number" step="1" id="costPerAcre" name="costPerAcre" placeholder="0" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="fuelCost">Fuel Cost ($)</Label>
-                <Input type="number" step="0.01" id="fuelCost" name="fuelCost" placeholder="0.00" required />
+                <Label htmlFor="amountPaid">Amount Paid (KSh)</Label>
+                <Input type="number" step="1" id="amountPaid" name="amountPaid" placeholder="0" required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="laborCost">Labor Cost ($)</Label>
-                <Input type="number" step="0.01" id="laborCost" name="laborCost" placeholder="0.00" required />
+                <Label htmlFor="mpesaCode">M-Pesa Code</Label>
+                <Input id="mpesaCode" name="mpesaCode" placeholder="ABC123XYZ" required className="uppercase" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="repairCost">Repair Cost ($)</Label>
-                <Input type="number" step="0.01" id="repairCost" name="repairCost" placeholder="0.00" defaultValue="0.00" />
+                <Label htmlFor="fuelCost">Fuel Cost (KSh)</Label>
+                <Input type="number" step="1" id="fuelCost" name="fuelCost" placeholder="0" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="laborCost">Labor Cost (KSh)</Label>
+                <Input type="number" step="1" id="laborCost" name="laborCost" placeholder="0" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="repairCost">Repair Cost (KSh)</Label>
+                <Input type="number" step="1" id="repairCost" name="repairCost" placeholder="0" defaultValue="0" />
               </div>
               <div className="md:col-span-2 pt-4">
                 <Button type="submit" className="w-full py-6 text-lg">Save Record</Button>
@@ -130,7 +140,7 @@ export default function OperationsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by implement or date..." 
+            placeholder="Search by implement, date, or M-Pesa code..." 
             className="pl-10"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -149,8 +159,9 @@ export default function OperationsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Implement</TableHead>
                 <TableHead className="text-right">Acres</TableHead>
-                <TableHead className="text-right">Net Profit</TableHead>
-                <TableHead className="text-right">Cost/Acre</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="text-right">Paid</TableHead>
+                <TableHead>M-Pesa</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -160,23 +171,12 @@ export default function OperationsPage() {
                   <TableRow key={op.id}>
                     <TableCell className="font-medium">{format(new Date(op.date), 'MM/dd/yy')}</TableCell>
                     <TableCell>{op.implement}</TableCell>
-                    <TableCell className="text-right">{op.acres}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">${op.netProfit.toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">${op.costPerAcre.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{op.acres.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-bold text-primary">KSh {op.revenue.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">KSh {op.amountPaid.toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-xs uppercase">{op.mpesaCode}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => {
-                            setEditingOp(op);
-                            // Normally we'd open a form with pre-filled values
-                            toast({ title: "Edit mode", description: "Editing is ready (demo)" });
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -196,7 +196,7 @@ export default function OperationsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground italic">
                     No operations found matching your criteria.
                   </TableCell>
                 </TableRow>

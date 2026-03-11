@@ -14,11 +14,13 @@ export interface Operation {
   repairCost: number;
   implement: string;
   acres: number;
+  costPerAcre: number;
   revenue: number;
+  amountPaid: number;
+  mpesaCode: string;
   // Computed fields
   totalExpenses: number;
   netProfit: number;
-  costPerAcre: number;
   profitPerAcre: number;
   fuelCostPerAcre: number;
 }
@@ -72,19 +74,19 @@ export function useTractorData() {
     localStorage.setItem(STORAGE_KEY_SERVICE, JSON.stringify(newService));
   };
 
-  const addOperation = (op: Omit<Operation, 'id' | 'totalExpenses' | 'netProfit' | 'costPerAcre' | 'profitPerAcre' | 'fuelCostPerAcre'>) => {
+  const addOperation = (op: Omit<Operation, 'id' | 'revenue' | 'totalExpenses' | 'netProfit' | 'profitPerAcre' | 'fuelCostPerAcre'>) => {
+    const revenue = op.costPerAcre * op.acres;
     const totalExpenses = op.fuelCost + op.laborCost + op.repairCost;
-    const netProfit = op.revenue - totalExpenses;
-    const costPerAcre = op.acres > 0 ? totalExpenses / op.acres : 0;
+    const netProfit = revenue - totalExpenses;
     const profitPerAcre = op.acres > 0 ? netProfit / op.acres : 0;
     const fuelCostPerAcre = op.acres > 0 ? op.fuelCost / op.acres : 0;
 
     const fullOp: Operation = {
       ...op,
       id: crypto.randomUUID(),
+      revenue,
       totalExpenses,
       netProfit,
-      costPerAcre,
       profitPerAcre,
       fuelCostPerAcre,
     };
@@ -102,16 +104,16 @@ export function useTractorData() {
     const newOps = operations.map(o => {
       if (o.id === id) {
         const merged = { ...o, ...updated };
+        const revenue = merged.costPerAcre * merged.acres;
         const totalExpenses = merged.fuelCost + merged.laborCost + merged.repairCost;
-        const netProfit = merged.revenue - totalExpenses;
-        const costPerAcre = merged.acres > 0 ? totalExpenses / merged.acres : 0;
+        const netProfit = revenue - totalExpenses;
         const profitPerAcre = merged.acres > 0 ? netProfit / merged.acres : 0;
         const fuelCostPerAcre = merged.acres > 0 ? merged.fuelCost / merged.acres : 0;
         return {
           ...merged,
+          revenue,
           totalExpenses,
           netProfit,
-          costPerAcre,
           profitPerAcre,
           fuelCostPerAcre
         };

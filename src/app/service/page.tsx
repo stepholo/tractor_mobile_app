@@ -8,17 +8,21 @@ import { Progress } from "@/components/ui/progress";
 import { Wrench, AlertTriangle, CheckCircle2, RotateCcw, Clock } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+
+const SERVICE_INTERVAL = 250;
+const ALERT_THRESHOLD = 50;
 
 export default function ServicePage() {
   const { service, updateService, isLoaded } = useTractorData();
 
-  if (!isLoaded) return <div className="p-8">Loading service data...</div>;
+  if (!isLoaded) return <div className="p-8 text-center">Loading service data...</div>;
 
   const hoursSinceLast = service.currentEngineHours - service.lastServiceHours;
-  const progressPercent = Math.min((hoursSinceLast / 50) * 100, 100);
-  const isServiceDue = hoursSinceLast >= 50;
+  const progressPercent = Math.min((hoursSinceLast / SERVICE_INTERVAL) * 100, 100);
+  
+  const isServiceDue = hoursSinceLast >= SERVICE_INTERVAL;
+  const isServiceWarning = hoursSinceLast >= (SERVICE_INTERVAL - ALERT_THRESHOLD);
 
   const nextServiceTypes: ServiceType[] = ['Minor', 'Major', 'Annual'];
   const currentIdx = nextServiceTypes.indexOf(service.lastServiceType);
@@ -46,7 +50,7 @@ export default function ServicePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline">Service Management</h1>
-          <p className="text-muted-foreground">Keep your machinery in peak condition.</p>
+          <p className="text-muted-foreground">Keep your machinery in peak condition with 250hr intervals.</p>
         </div>
       </div>
 
@@ -72,18 +76,26 @@ export default function ServicePage() {
 
             <div className="space-y-3">
               <div className="flex justify-between text-sm font-medium">
-                <span>Progress to next service</span>
-                <span>{hoursSinceLast.toFixed(1)} / 50.0 hrs</span>
+                <span>Progress to next service (250hr interval)</span>
+                <span>{hoursSinceLast.toFixed(1)} / {SERVICE_INTERVAL}.0 hrs</span>
               </div>
               <Progress value={progressPercent} className="h-4 bg-secondary" />
             </div>
 
             {isServiceDue ? (
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 animate-pulse">
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 animate-pulse">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
+                <div>
+                  <h4 className="font-bold text-lg">MAINTENANCE OVERDUE!</h4>
+                  <p className="text-sm opacity-90">Tractor has exceeded the {SERVICE_INTERVAL}-hour service interval. Perform a <strong>{nextType}</strong> service immediately.</p>
+                </div>
+              </div>
+            ) : isServiceWarning ? (
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800">
                 <AlertTriangle className="w-8 h-8 text-primary" />
                 <div>
-                  <h4 className="font-bold text-lg">Maintenance Due!</h4>
-                  <p className="text-sm opacity-90">Tractor has exceeded the 50-hour service interval. Perform a <strong>{nextType}</strong> service immediately.</p>
+                  <h4 className="font-bold text-lg">Service Due Soon</h4>
+                  <p className="text-sm opacity-90">Approaching the {SERVICE_INTERVAL}-hour mark. Prepare for <strong>{nextType}</strong> service in {(SERVICE_INTERVAL - hoursSinceLast).toFixed(1)} hours.</p>
                 </div>
               </div>
             ) : (
@@ -91,7 +103,7 @@ export default function ServicePage() {
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
                 <div>
                   <h4 className="font-bold text-lg">System Optimal</h4>
-                  <p className="text-sm opacity-90">Next maintenance is required in {(50 - hoursSinceLast).toFixed(1)} hours.</p>
+                  <p className="text-sm opacity-90">Next maintenance is required in {(SERVICE_INTERVAL - hoursSinceLast).toFixed(1)} hours.</p>
                 </div>
               </div>
             )}
@@ -100,7 +112,7 @@ export default function ServicePage() {
               size="lg" 
               className="w-full py-8 text-xl shadow-lg" 
               onClick={handleRecordService}
-              variant={isServiceDue ? "default" : "outline"}
+              variant={isServiceWarning ? "default" : "outline"}
             >
               <RotateCcw className="w-5 h-5 mr-2" />
               Record {nextType} Service Now
@@ -136,14 +148,10 @@ export default function ServicePage() {
               <h4 className="text-sm font-bold uppercase text-muted-foreground">Maintenance History</h4>
               <div className="space-y-2">
                  <div className="flex items-center justify-between text-sm p-2 bg-secondary rounded">
-                    <span>Minor Service</span>
-                    <span className="text-muted-foreground">250.5 hrs</span>
+                    <span>{service.lastServiceType} Service</span>
+                    <span className="text-muted-foreground">{service.lastServiceHours} hrs</span>
                  </div>
-                 <div className="flex items-center justify-between text-sm p-2 bg-secondary rounded">
-                    <span>Major Service</span>
-                    <span className="text-muted-foreground">200.0 hrs</span>
-                 </div>
-                 <p className="text-xs text-center text-muted-foreground italic mt-2 underline cursor-pointer">View Full History</p>
+                 <p className="text-xs text-center text-muted-foreground italic mt-2">Historical data logged locally</p>
               </div>
             </div>
           </CardContent>

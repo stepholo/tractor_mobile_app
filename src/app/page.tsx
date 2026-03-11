@@ -7,7 +7,6 @@ import {
   Tractor, 
   Droplets, 
   BadgeDollarSign, 
-  Map as MapIcon, 
   BarChart3, 
   History,
   TrendingUp,
@@ -20,16 +19,10 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
+  ResponsiveContainer
 } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-
-const COLORS = ['#FF7F00', '#000000', '#666666', '#AAAAAA'];
 
 export default function Dashboard() {
   const { operations, service, isLoaded } = useTractorData();
@@ -59,25 +52,25 @@ export default function Dashboard() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold font-headline">Operational Overview</h1>
-        <p className="text-muted-foreground">Key metrics for your tractor operations.</p>
+        <p className="text-muted-foreground">Key metrics for your tractor operations in Kenya Shillings.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title="Total Acres" 
-          value={totalAcres.toFixed(1)} 
+          value={totalAcres.toFixed(2)} 
           icon={<LandPlot className="w-5 h-5" />} 
           description="Completed to date"
         />
         <StatCard 
           title="Net Profit" 
-          value={`$${netProfit.toLocaleString()}`} 
+          value={`KSh ${netProfit.toLocaleString()}`} 
           icon={<BadgeDollarSign className="w-5 h-5" />} 
           description="Revenue - Expenses"
         />
         <StatCard 
           title="Avg Profit/Acre" 
-          value={`$${avgProfitPerAcre.toFixed(2)}`} 
+          value={`KSh ${avgProfitPerAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} 
           icon={<TrendingUp className="w-5 h-5" />} 
           description="Net efficiency"
         />
@@ -94,7 +87,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-primary" />
-              Profit by Implement
+              Profit by Implement (KSh)
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
@@ -106,7 +99,7 @@ export default function Dashboard() {
                   <YAxis />
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                    formatter={(value: number) => [`$${value.toFixed(2)}`, 'Profit']}
+                    formatter={(value: number) => [`KSh ${value.toLocaleString()}`, 'Profit']}
                   />
                   <Bar dataKey="profit" fill="#FF7F00" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -134,8 +127,8 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground">{format(new Date(op.date), 'MMM dd, yyyy')}</span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="font-bold text-primary">${op.netProfit.toLocaleString()}</span>
-                      <span className="text-xs text-muted-foreground">{op.acres} Acres</span>
+                      <span className="font-bold text-primary">KSh {op.revenue.toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">{op.acres.toFixed(2)} Acres</span>
                     </div>
                   </div>
                 ))
@@ -150,14 +143,14 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-none shadow-md bg-black text-white p-6 col-span-1 md:col-span-1 flex flex-col justify-between">
            <div>
-             <h3 className="text-primary font-bold uppercase tracking-widest text-xs mb-2">Efficiency Warning</h3>
+             <h3 className="text-primary font-bold uppercase tracking-widest text-xs mb-2">Fuel Efficiency</h3>
              <p className="text-lg font-headline">
-               {avgFuelPerAcre > 15 ? "Fuel costs are higher than average." : "Efficiency is within optimal range."}
+               {avgFuelPerAcre > 1500 ? "Fuel costs are higher than average." : "Efficiency is within optimal range."}
              </p>
            </div>
            <div className="mt-4 flex items-center gap-2">
              <Droplets className="text-primary w-5 h-5" />
-             <span className="text-sm font-medium">${avgFuelPerAcre.toFixed(2)}/Acre Fuel</span>
+             <span className="text-sm font-medium">KSh {avgFuelPerAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}/Acre Fuel</span>
            </div>
         </Card>
         
@@ -165,9 +158,9 @@ export default function Dashboard() {
           <div className="space-y-1">
             <h3 className="text-muted-foreground text-sm font-medium">Service Progress</h3>
             <p className="text-2xl font-bold font-headline">
-              Next Service in {(50 - (service.currentEngineHours % 50)).toFixed(1)} hrs
+              Next Service in {(250 - (service.currentEngineHours % 250)).toFixed(1)} hrs
             </p>
-            <p className="text-xs text-muted-foreground">Scheduled alert at { (Math.floor(service.currentEngineHours / 50) + 1) * 50 } hours</p>
+            <p className="text-xs text-muted-foreground">Scheduled alert every 250 hours (Next at { (Math.floor(service.currentEngineHours / 250) + 1) * 250 } hrs)</p>
           </div>
           <div className="relative w-16 h-16">
              <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -180,14 +173,14 @@ export default function Dashboard() {
                <path
                  className="text-primary stroke-current"
                  strokeWidth="3"
-                 strokeDasharray={`${((service.currentEngineHours % 50) / 50) * 100}, 100`}
+                 strokeDasharray={`${((service.currentEngineHours % 250) / 250) * 100}, 100`}
                  strokeLinecap="round"
                  fill="none"
                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                />
              </svg>
              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
-               {Math.round(((service.currentEngineHours % 50) / 50) * 100)}%
+               {Math.round(((service.currentEngineHours % 250) / 250) * 100)}%
              </div>
           </div>
         </Card>

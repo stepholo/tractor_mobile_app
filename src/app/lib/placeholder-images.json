@@ -1,0 +1,11 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "tractor-hero",
+      "description": "A modern tractor in a field at sunset",
+      "imageUrl": "https://picsum.photos/seed/tractor1/1200/600",
+      "imageHint": "tractor field"
+    }
+  ]
+}

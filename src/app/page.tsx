@@ -29,18 +29,19 @@ export default function Dashboard() {
 
   if (!isLoaded) return <div className="flex items-center justify-center h-screen font-headline">Loading Dashboard...</div>;
 
-  const totalAcres = operations.reduce((acc, op) => acc + op.acres, 0);
-  const totalRevenue = operations.reduce((acc, op) => acc + op.revenue, 0);
-  const totalExpenses = operations.reduce((acc, op) => acc + op.totalExpenses, 0);
+  const totalAcres = operations.reduce((acc, op) => acc + (op.acres || 0), 0);
+  const totalRevenue = operations.reduce((acc, op) => acc + (op.revenue || 0), 0);
+  const totalExpenses = operations.reduce((acc, op) => acc + (op.totalExpenses || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
   const avgProfitPerAcre = totalAcres > 0 ? netProfit / totalAcres : 0;
-  const avgFuelPerAcre = totalAcres > 0 ? operations.reduce((acc, op) => acc + op.fuelCost, 0) / totalAcres : 0;
+  const avgFuelPerAcre = totalAcres > 0 ? operations.reduce((acc, op) => acc + (op.fuelCost || 0), 0) / totalAcres : 0;
 
   // Implement Summary
   const implementDataMap = operations.reduce((acc: any, op) => {
-    if (!acc[op.implement]) acc[op.implement] = { name: op.implement, acres: 0, profit: 0 };
-    acc[op.implement].acres += op.acres;
-    acc[op.implement].profit += op.netProfit;
+    const name = op.implement || 'Unknown';
+    if (!acc[name]) acc[name] = { name, acres: 0, profit: 0 };
+    acc[name].acres += (op.acres || 0);
+    acc[name].profit += (op.netProfit || 0);
     return acc;
   }, {});
   const implementData = Object.values(implementDataMap);
@@ -76,7 +77,7 @@ export default function Dashboard() {
         />
         <StatCard 
           title="Engine Hours" 
-          value={service.currentEngineHours.toFixed(1)} 
+          value={(service.currentEngineHours || 0).toFixed(1)} 
           icon={<Tractor className="w-5 h-5" />} 
           description="Current reading"
         />
@@ -123,12 +124,12 @@ export default function Dashboard() {
                 recentOps.map((op) => (
                   <div key={op.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
                     <div className="flex flex-col">
-                      <span className="font-semibold">{op.implement}</span>
-                      <span className="text-xs text-muted-foreground">{format(new Date(op.date), 'MMM dd, yyyy')}</span>
+                      <span className="font-semibold">{op.implement || 'N/A'}</span>
+                      <span className="text-xs text-muted-foreground">{op.date ? format(new Date(op.date), 'MMM dd, yyyy') : 'N/A'}</span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="font-bold text-primary">KSh {op.revenue.toLocaleString()}</span>
-                      <span className="text-xs text-muted-foreground">{op.acres.toFixed(2)} Acres</span>
+                      <span className="font-bold text-primary">KSh {(op.revenue || 0).toLocaleString()}</span>
+                      <span className="text-xs text-muted-foreground">{(op.acres || 0).toFixed(2)} Acres</span>
                     </div>
                   </div>
                 ))
@@ -158,9 +159,9 @@ export default function Dashboard() {
           <div className="space-y-1">
             <h3 className="text-muted-foreground text-sm font-medium">Service Progress</h3>
             <p className="text-2xl font-bold font-headline">
-              Next Service in {(250 - (service.currentEngineHours % 250)).toFixed(1)} hrs
+              Next Service in {(250 - ((service.currentEngineHours || 0) % 250)).toFixed(1)} hrs
             </p>
-            <p className="text-xs text-muted-foreground">Scheduled alert every 250 hours (Next at { (Math.floor(service.currentEngineHours / 250) + 1) * 250 } hrs)</p>
+            <p className="text-xs text-muted-foreground">Scheduled alert every 250 hours (Next at { (Math.floor((service.currentEngineHours || 0) / 250) + 1) * 250 } hrs)</p>
           </div>
           <div className="relative w-16 h-16">
              <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -173,14 +174,14 @@ export default function Dashboard() {
                <path
                  className="text-primary stroke-current"
                  strokeWidth="3"
-                 strokeDasharray={`${((service.currentEngineHours % 250) / 250) * 100}, 100`}
+                 strokeDasharray={`${(((service.currentEngineHours || 0) % 250) / 250) * 100}, 100`}
                  strokeLinecap="round"
                  fill="none"
                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                />
              </svg>
              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
-               {Math.round(((service.currentEngineHours % 250) / 250) * 100)}%
+               {Math.round((((service.currentEngineHours || 0) % 250) / 250) * 100)}%
              </div>
           </div>
         </Card>

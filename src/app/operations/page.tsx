@@ -35,9 +35,9 @@ export default function OperationsPage() {
   if (!isLoaded) return <div className="p-8 font-headline text-center">Loading operations...</div>;
 
   const filteredOps = operations.filter(op => 
-    op.implement.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    op.date.includes(searchQuery) ||
-    op.mpesaCode.toLowerCase().includes(searchQuery.toLowerCase())
+    (op.implement?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+    (op.date || "").includes(searchQuery) ||
+    (op.mpesaCode?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -46,15 +46,15 @@ export default function OperationsPage() {
     
     const data = {
       date: formData.get("date") as string,
-      engineHours: parseFloat(formData.get("engineHours") as string),
-      fuelCost: parseFloat(formData.get("fuelCost") as string),
-      laborCost: parseFloat(formData.get("laborCost") as string),
-      repairCost: parseFloat(formData.get("repairCost") as string),
-      implement: formData.get("implement") as string,
-      acres: parseFloat(formData.get("acres") as string),
-      costPerAcre: parseFloat(formData.get("costPerAcre") as string),
-      amountPaid: parseFloat(formData.get("amountPaid") as string),
-      mpesaCode: formData.get("mpesaCode") as string,
+      engineHours: parseFloat(formData.get("engineHours") as string) || 0,
+      fuelCost: parseFloat(formData.get("fuelCost") as string) || 0,
+      laborCost: parseFloat(formData.get("laborCost") as string) || 0,
+      repairCost: parseFloat(formData.get("repairCost") as string) || 0,
+      implement: formData.get("implement") as string || "N/A",
+      acres: parseFloat(formData.get("acres") as string) || 0,
+      costPerAcre: parseFloat(formData.get("costPerAcre") as string) || 0,
+      amountPaid: parseFloat(formData.get("amountPaid") as string) || 0,
+      mpesaCode: formData.get("mpesaCode") as string || "",
     };
 
     if (editingOp) {
@@ -169,12 +169,12 @@ export default function OperationsPage() {
               {filteredOps.length > 0 ? (
                 filteredOps.map((op) => (
                   <TableRow key={op.id}>
-                    <TableCell className="font-medium">{format(new Date(op.date), 'MM/dd/yy')}</TableCell>
-                    <TableCell>{op.implement}</TableCell>
-                    <TableCell className="text-right">{op.acres.toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">KSh {op.revenue.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">KSh {op.amountPaid.toLocaleString()}</TableCell>
-                    <TableCell className="font-mono text-xs uppercase">{op.mpesaCode}</TableCell>
+                    <TableCell className="font-medium">{op.date ? format(new Date(op.date), 'MM/dd/yy') : 'N/A'}</TableCell>
+                    <TableCell>{op.implement || 'N/A'}</TableCell>
+                    <TableCell className="text-right">{(op.acres || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-bold text-primary">KSh {(op.revenue || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">KSh {(op.amountPaid || 0).toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-xs uppercase">{op.mpesaCode || '-'}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-2">
                         <Button 

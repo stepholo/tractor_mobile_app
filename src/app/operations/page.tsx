@@ -28,7 +28,7 @@ import { toast } from "@/hooks/use-toast";
 
 export default function OperationsPage() {
   const { operations, addOperation, deleteOperation, editOperation, isLoaded } = useTractorData();
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingOp, setEditingOp] = useState<Operation | null>(null);
 
@@ -39,6 +39,16 @@ export default function OperationsPage() {
     (op.date || "").includes(searchQuery) ||
     (op.mpesaCode?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
+
+  const handleOpenNew = () => {
+    setEditingOp(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenEdit = (op: Operation) => {
+    setEditingOp(op);
+    setIsDialogOpen(true);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -60,10 +70,11 @@ export default function OperationsPage() {
     if (editingOp) {
       editOperation(editingOp.id, data);
       setEditingOp(null);
+      setIsDialogOpen(false);
       toast({ title: "Record updated", description: "Operation successfully updated." });
     } else {
       addOperation(data);
-      setIsAddOpen(false);
+      setIsDialogOpen(false);
       toast({ title: "Record saved", description: "Daily operation has been logged." });
     }
   };
@@ -76,60 +87,65 @@ export default function OperationsPage() {
           <p className="text-muted-foreground">Manage and record daily activity.</p>
         </div>
         
-        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-          <DialogTrigger asChild>
-            <Button size="lg" className="rounded-full shadow-lg h-14 w-full md:w-auto px-8">
-              <Plus className="w-5 h-5 mr-2" />
-              New Log Entry
-            </Button>
-          </DialogTrigger>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) setEditingOp(null);
+        }}>
+          <Button onClick={handleOpenNew} size="lg" className="rounded-full shadow-lg h-14 w-full md:w-auto px-8">
+            <Plus className="w-5 h-5 mr-2" />
+            New Log Entry
+          </Button>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-headline">Log Daily Operation</DialogTitle>
+              <DialogTitle className="text-2xl font-headline">
+                {editingOp ? "Edit Log Entry" : "Log Daily Operation"}
+              </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <form key={editingOp?.id || 'new'} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
-                <Input type="date" id="date" name="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+                <Input type="date" id="date" name="date" required defaultValue={editingOp?.date || new Date().toISOString().split('T')[0]} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="implement">Implement Used</Label>
-                <Input id="implement" name="implement" placeholder="e.g., Plow, Seeder" required />
+                <Input id="implement" name="implement" placeholder="e.g., Plow, Seeder" required defaultValue={editingOp?.implement || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="engineHours">Engine Hours</Label>
-                <Input type="number" step="0.1" id="engineHours" name="engineHours" placeholder="0.0" required />
+                <Input type="number" step="0.1" id="engineHours" name="engineHours" placeholder="0.0" required defaultValue={editingOp?.engineHours || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="acres">Acres Completed</Label>
-                <Input type="number" step="0.01" id="acres" name="acres" placeholder="0.00" required />
+                <Input type="number" step="0.01" id="acres" name="acres" placeholder="0.00" required defaultValue={editingOp?.acres || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="costPerAcre">Cost Per Acre (KSh)</Label>
-                <Input type="number" step="1" id="costPerAcre" name="costPerAcre" placeholder="0" required />
+                <Input type="number" step="1" id="costPerAcre" name="costPerAcre" placeholder="0" required defaultValue={editingOp?.costPerAcre || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amountPaid">Amount Paid (KSh)</Label>
-                <Input type="number" step="1" id="amountPaid" name="amountPaid" placeholder="0" required />
+                <Input type="number" step="1" id="amountPaid" name="amountPaid" placeholder="0" required defaultValue={editingOp?.amountPaid || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mpesaCode">M-Pesa Code</Label>
-                <Input id="mpesaCode" name="mpesaCode" placeholder="ABC123XYZ" required className="uppercase" />
+                <Input id="mpesaCode" name="mpesaCode" placeholder="ABC123XYZ" required className="uppercase" defaultValue={editingOp?.mpesaCode || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fuelCost">Fuel Cost (KSh)</Label>
-                <Input type="number" step="1" id="fuelCost" name="fuelCost" placeholder="0" required />
+                <Input type="number" step="1" id="fuelCost" name="fuelCost" placeholder="0" required defaultValue={editingOp?.fuelCost || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="laborCost">Labor Cost (KSh)</Label>
-                <Input type="number" step="1" id="laborCost" name="laborCost" placeholder="0" required />
+                <Input type="number" step="1" id="laborCost" name="laborCost" placeholder="0" required defaultValue={editingOp?.laborCost || ""} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="repairCost">Repair Cost (KSh)</Label>
-                <Input type="number" step="1" id="repairCost" name="repairCost" placeholder="0" defaultValue="0" />
+                <Input type="number" step="1" id="repairCost" name="repairCost" placeholder="0" defaultValue={editingOp?.repairCost || "0"} />
               </div>
               <div className="md:col-span-2 pt-4">
-                <Button type="submit" className="w-full py-6 text-lg">Save Record</Button>
+                <Button type="submit" className="w-full py-6 text-lg">
+                  {editingOp ? "Update Record" : "Save Record"}
+                </Button>
               </div>
             </form>
           </DialogContent>
@@ -177,6 +193,14 @@ export default function OperationsPage() {
                     <TableCell className="font-mono text-xs uppercase">{op.mpesaCode || '-'}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => handleOpenEdit(op)}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 

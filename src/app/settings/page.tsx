@@ -1,14 +1,35 @@
 
 "use client";
 
-import { useTractorData } from "@/app/lib/store";
+import { useTractorData, TractorModel } from "@/app/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Download, Trash2, Database, ShieldCheck, Share2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Download, Trash2, Database, ShieldCheck, Share2, UserCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 export default function SettingsPage() {
-  const { operations, isLoaded } = useTractorData();
+  const { operations, profile, updateProfile, isLoaded } = useTractorData();
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [model, setModel] = useState<TractorModel>("OTHER");
+
+  useEffect(() => {
+    if (isLoaded && profile) {
+      setName(profile.name || "");
+      setPhone(profile.phone || "");
+      setModel(profile.tractorModel || "OTHER");
+    }
+  }, [isLoaded, profile]);
+
+  const handleUpdateProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateProfile({ name, phone, tractorModel: model });
+    toast({ title: "Profile Updated", description: "Your details have been saved." });
+  };
 
   const exportToExcel = () => {
     if (operations.length === 0) {
@@ -16,7 +37,6 @@ export default function SettingsPage() {
       return;
     }
 
-    // Creating a CSV blob as a light spreadsheet export
     const headers = [
       "Date", 
       "Implement", 
@@ -39,15 +59,29 @@ export default function SettingsPage() {
       op.acres.toFixed(2),
       op.costPerAcre,
       op.revenue,
-      op.amountPaid,
-      op.mpesaCode,
+      op.amountPaid || 0,
+      op.mpesaCode || "-",
       op.fuelCost,
       op.laborCost,
       op.repairCost,
       op.netProfit
     ]);
 
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    // Metadata header
+    const metaInfo = [
+      ["Owner Name", profile.name],
+      ["Phone Number", profile.phone],
+      ["Tractor Model", profile.tractorModel],
+      ["Export Date", new Date().toLocaleString()],
+      [], // Spacer
+    ];
+
+    const csvContent = [
+      ...metaInfo.map(e => e.join(",")),
+      headers.join(","),
+      ...rows.map(e => e.join(","))
+    ].join("\n");
+    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -67,14 +101,53 @@ export default function SettingsPage() {
     }
   };
 
+  if (!isLoaded) return <div className="p-8 text-center font-headline">Loading Settings...</div>;
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold font-headline">Settings & Data</h1>
-        <p className="text-muted-foreground">Manage your local database and exports.</p>
+        <p className="text-muted-foreground">Manage your profile and local database.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-none shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCircle className="w-5 h-5 text-primary" />
+              Owner Profile
+            </CardTitle>
+            <CardDescription>Update your contact and tractor information.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Tractor Model</Label>
+                <Select value={model} onValueChange={(v) => setModel(v as TractorModel)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NEW HOLLAND">New Holland</SelectItem>
+                    <SelectItem value="CASE IH">Case IH</SelectItem>
+                    <SelectItem value="JOHN DEERE">John Deere</SelectItem>
+                    <SelectItem value="OTHER">Other / Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full">Save Changes</Button>
+            </form>
+          </CardContent>
+        </Card>
+
         <Card className="border-none shadow-md overflow-hidden">
           <div className="bg-primary h-2 w-full" />
           <CardHeader>
@@ -82,16 +155,17 @@ export default function SettingsPage() {
               <Download className="w-5 h-5" />
               Excel Data Export
             </CardTitle>
-            <CardDescription>Download your operational history as a spreadsheet.</CardDescription>
+            <CardDescription>Download history as a professional spreadsheet.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Total records available: <strong>{operations.length}</strong>
+              Total records: <strong>{operations.length}</strong>
             </p>
             <Button size="lg" className="w-full" onClick={exportToExcel}>
               <Download className="w-4 h-4 mr-2" />
-              Download Spreadsheet (.csv)
+              Download CSV (.csv)
             </Button>
+            <p className="text-[10px] text-muted-foreground italic text-center">Includes owner profile, engine hours, and payment details.</p>
           </CardContent>
         </Card>
 
@@ -102,47 +176,43 @@ export default function SettingsPage() {
               <Database className="w-5 h-5" />
               Offline Storage
             </CardTitle>
-            <CardDescription>Your data is stored locally on this device (KSh format).</CardDescription>
+            <CardDescription>Your data is stored locally on this device.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
               <ShieldCheck className="w-8 h-8 text-green-500" />
               <div className="text-sm">
                 <p className="font-bold">Secure Local Storage</p>
-                <p className="text-muted-foreground">No data is sent to external servers.</p>
+                <p className="text-muted-foreground">Privacy focused. No cloud tracking.</p>
               </div>
             </div>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" disabled>
               <Share2 className="w-4 h-4 mr-2" />
               Backup to Cloud (Coming Soon)
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="border border-destructive/20 shadow-md col-span-1 md:col-span-2">
+        <Card className="border border-destructive/20 shadow-md">
           <CardHeader>
             <CardTitle className="text-destructive flex items-center gap-2">
               <Trash2 className="w-5 h-5" />
               Danger Zone
             </CardTitle>
-            <CardDescription>Irreversible actions related to your ledger records.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <p className="text-sm text-muted-foreground">
-                Resetting will clear all daily operations and service history. This cannot be undone.
-              </p>
-              <Button variant="destructive" onClick={resetAllData}>
-                Reset All Ledger Data
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Resetting will clear all operations and settings.
+            </p>
+            <Button variant="destructive" className="w-full" onClick={resetAllData}>
+              Reset All Ledger Data
+            </Button>
           </CardContent>
         </Card>
       </div>
 
       <div className="text-center pt-8 opacity-40">
-        <p className="text-xs uppercase tracking-widest font-bold">Tractor Ledger Pro v1.1.0 (Kenya Edition)</p>
-        <p className="text-[10px] mt-1">Designed for professional agricultural management.</p>
+        <p className="text-xs uppercase tracking-widest font-bold">Tractor Ledger Pro v1.2.0 (Kenya Edition)</p>
       </div>
     </div>
   );

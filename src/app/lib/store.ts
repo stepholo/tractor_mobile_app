@@ -8,6 +8,12 @@ export type TractorModel = 'NEW HOLLAND' | 'CASE IH' | 'JOHN DEERE' | 'OTHER';
 
 export const SERVICE_CYCLE: ServiceType[] = ['Minor', 'Major', 'Minor', 'Annual'];
 
+export interface UserProfile {
+  name: string;
+  phone: string;
+  tractorModel: TractorModel;
+}
+
 export interface Operation {
   id: string;
   date: string;
@@ -38,9 +44,15 @@ export interface ServiceState {
 const DEFAULT_SERVICE_STATE: ServiceState = {
   lastServiceHours: 0,
   lastServiceType: 'Annual',
-  lastServiceIndex: 3, // Start at end so first recommended is Minor (index 0)
+  lastServiceIndex: 3,
   currentEngineHours: 0,
-  tractorModel: 'NEW HOLLAND',
+  tractorModel: 'OTHER',
+};
+
+const DEFAULT_PROFILE: UserProfile = {
+  name: '',
+  phone: '',
+  tractorModel: 'OTHER',
 };
 
 export const SERVICE_KITS: Record<Exclude<TractorModel, 'OTHER'>, Record<ServiceType, string[]>> = {
@@ -63,15 +75,18 @@ export const SERVICE_KITS: Record<Exclude<TractorModel, 'OTHER'>, Record<Service
 
 const STORAGE_KEY_OPERATIONS = 'tractor_operations_v1';
 const STORAGE_KEY_SERVICE = 'tractor_service_v1';
+const STORAGE_KEY_PROFILE = 'tractor_profile_v1';
 
 export function useTractorData() {
   const [operations, setOperations] = useState<Operation[]>([]);
   const [service, setService] = useState<ServiceState>(DEFAULT_SERVICE_STATE);
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const storedOps = localStorage.getItem(STORAGE_KEY_OPERATIONS);
     const storedService = localStorage.getItem(STORAGE_KEY_SERVICE);
+    const storedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
 
     if (storedOps) {
       try {
@@ -84,15 +99,21 @@ export function useTractorData() {
     if (storedService) {
       try {
         const parsed = JSON.parse(storedService);
-        // Merge with defaults to handle missing keys in older data versions
-        setService({
-          ...DEFAULT_SERVICE_STATE,
-          ...parsed
-        });
+        setService({ ...DEFAULT_SERVICE_STATE, ...parsed });
       } catch (e) {
         console.error("Failed to parse service data", e);
       }
     }
+
+    if (storedProfile) {
+      try {
+        const parsed = JSON.parse(storedProfile);
+        setProfile({ ...DEFAULT_PROFILE, ...parsed });
+      } catch (e) {
+        console.error("Failed to parse profile data", e);
+      }
+    }
+
     setIsLoaded(true);
   }, []);
 
@@ -111,6 +132,14 @@ export function useTractorData() {
   const updateService = (newService: ServiceState) => {
     setService(newService);
     localStorage.setItem(STORAGE_KEY_SERVICE, JSON.stringify(newService));
+  };
+
+  const updateProfile = (newProfile: UserProfile) => {
+    setProfile(newProfile);
+    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(newProfile));
+    
+    // Sync tractor model to service state as well
+    updateService({ ...service, tractorModel: newProfile.tractorModel });
   };
 
   const addOperation = (op: Omit<Operation, 'id' | 'revenue' | 'totalExpenses' | 'netProfit' | 'profitPerAcre' | 'fuelCostPerAcre'>) => {
@@ -165,10 +194,12 @@ export function useTractorData() {
   return {
     operations,
     service,
+    profile,
     isLoaded,
     addOperation,
     deleteOperation,
     editOperation,
     updateService,
+    updateProfile,
   };
 }

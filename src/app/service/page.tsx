@@ -1,22 +1,32 @@
 
 "use client";
 
-import { useTractorData, ServiceType } from "@/app/lib/store";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useTractorData, SERVICE_CYCLE, SERVICE_KITS, TractorModel } from "@/app/lib/store";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Wrench, AlertTriangle, CheckCircle2, RotateCcw, Clock } from "lucide-react";
+import { Wrench, AlertTriangle, CheckCircle2, RotateCcw, Clock, Settings2, PackageCheck } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { useState } from "react";
 
 const SERVICE_INTERVAL = 250;
 const ALERT_THRESHOLD = 50;
 
 export default function ServicePage() {
   const { service, updateService, isLoaded } = useTractorData();
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
-  if (!isLoaded) return <div className="p-8 text-center">Loading service data...</div>;
+  if (!isLoaded) return <div className="p-8 text-center font-headline">Loading service data...</div>;
 
   const hoursSinceLast = service.currentEngineHours - service.lastServiceHours;
   const progressPercent = Math.min((hoursSinceLast / SERVICE_INTERVAL) * 100, 100);
@@ -24,17 +34,21 @@ export default function ServicePage() {
   const isServiceDue = hoursSinceLast >= SERVICE_INTERVAL;
   const isServiceWarning = hoursSinceLast >= (SERVICE_INTERVAL - ALERT_THRESHOLD);
 
-  const nextServiceTypes: ServiceType[] = ['Minor', 'Major', 'Annual'];
-  const currentIdx = nextServiceTypes.indexOf(service.lastServiceType);
-  const nextType = nextServiceTypes[(currentIdx + 1) % 3];
+  // Cycle: Minor -> Major -> Minor -> Annual
+  const nextIdx = (service.lastServiceIndex + 1) % 4;
+  const nextType = SERVICE_CYCLE[nextIdx];
 
   const handleRecordService = () => {
     updateService({
       ...service,
       lastServiceHours: service.currentEngineHours,
       lastServiceType: nextType,
+      lastServiceIndex: nextIdx,
     });
-    toast({ title: "Service Recorded", description: `${nextType} service logged at ${service.currentEngineHours} hours.` });
+    toast({ 
+      title: "Service Recorded", 
+      description: `${nextType} service logged at ${service.currentEngineHours} hours.` 
+    });
   };
 
   const handleManualHoursUpdate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -45,74 +59,119 @@ export default function ServicePage() {
     toast({ title: "Hours Updated", description: `Current engine hours set to ${newHours}.` });
   };
 
+  const handleModelUpdate = (model: TractorModel) => {
+    updateService({ ...service, tractorModel: model });
+    toast({ title: "Tractor Configured", description: `Model set to ${model}` });
+  };
+
+  const kits = service.tractorModel !== 'OTHER' ? SERVICE_KITS[service.tractorModel][nextType] : null;
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline">Service Management</h1>
-          <p className="text-muted-foreground">Keep your machinery in peak condition with 250hr intervals.</p>
+          <p className="text-muted-foreground">Automated logging for {service.tractorModel} maintenance.</p>
         </div>
+        
+        <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Settings2 className="w-4 h-4" />
+              Configure Tractor
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tractor Configuration</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Select Tractor Model</Label>
+                <Select value={service.tractorModel} onValueChange={(val) => handleModelUpdate(val as TractorModel)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NEW HOLLAND">New Holland</SelectItem>
+                    <SelectItem value="CASE IH">Case IH</SelectItem>
+                    <SelectItem value="JOHN DEERE">John Deere</SelectItem>
+                    <SelectItem value="OTHER">Other / Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground italic">
+                The model determines the specific kits and lubricants suggested for each service type.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="col-span-1 md:col-span-2 border-none shadow-md">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border-none shadow-md overflow-hidden">
+          <div className="bg-primary h-1 w-full" />
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
               Service Status
             </CardTitle>
+            <CardDescription>Track progression through the 4-step service cycle.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 p-4 bg-secondary/30 rounded-lg">
               <div>
-                <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Last Service</p>
-                <p className="text-2xl font-headline font-bold">{service.lastServiceType} @ {service.lastServiceHours} hrs</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Last Completed</p>
+                <p className="text-xl font-headline font-bold">{service.lastServiceType} @ {service.lastServiceHours} hrs</p>
               </div>
+              <div className="hidden md:block h-10 w-px bg-border" />
               <div className="text-left md:text-right">
-                <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Next Recommended</p>
-                <p className="text-2xl font-headline font-bold text-primary">{nextType} Service</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Next Required</p>
+                <p className="text-xl font-headline font-bold text-primary">{nextType} Service</p>
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between text-sm font-medium">
-                <span>Progress to next service (250hr interval)</span>
-                <span>{hoursSinceLast.toFixed(1)} / {SERVICE_INTERVAL}.0 hrs</span>
+                <span>Maintenance Progress (250hr interval)</span>
+                <span className={isServiceDue ? "text-destructive font-bold" : ""}>
+                  {hoursSinceLast.toFixed(1)} / {SERVICE_INTERVAL}.0 hrs
+                </span>
               </div>
-              <Progress value={progressPercent} className="h-4 bg-secondary" />
+              <Progress value={progressPercent} className="h-4" />
             </div>
 
             {isServiceDue ? (
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 animate-pulse">
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-destructive/10 border border-destructive/20 animate-pulse">
                 <AlertTriangle className="w-8 h-8 text-destructive" />
                 <div>
-                  <h4 className="font-bold text-lg">MAINTENANCE OVERDUE!</h4>
-                  <p className="text-sm opacity-90">Tractor has exceeded the {SERVICE_INTERVAL}-hour service interval. Perform a <strong>{nextType}</strong> service immediately.</p>
+                  <h4 className="font-bold text-lg text-destructive">MAINTENANCE OVERDUE!</h4>
+                  <p className="text-sm opacity-90">Machine has exceeded the {SERVICE_INTERVAL}-hour limit. Perform {nextType} service immediately.</p>
                 </div>
               </div>
             ) : isServiceWarning ? (
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800">
-                <AlertTriangle className="w-8 h-8 text-primary" />
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                <AlertTriangle className="w-8 h-8 text-orange-500" />
                 <div>
-                  <h4 className="font-bold text-lg">Service Due Soon</h4>
-                  <p className="text-sm opacity-90">Approaching the {SERVICE_INTERVAL}-hour mark. Prepare for <strong>{nextType}</strong> service in {(SERVICE_INTERVAL - hoursSinceLast).toFixed(1)} hours.</p>
+                  <h4 className="font-bold text-lg text-orange-600">Service Alert (Early Warning)</h4>
+                  <p className="text-sm opacity-90">Approaching the {SERVICE_INTERVAL}-hour mark. Prepare for {nextType} service in {(SERVICE_INTERVAL - hoursSinceLast).toFixed(1)} hours.</p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-800/50">
+              <div className="flex items-center gap-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
                 <div>
-                  <h4 className="font-bold text-lg">System Optimal</h4>
-                  <p className="text-sm opacity-90">Next maintenance is required in {(SERVICE_INTERVAL - hoursSinceLast).toFixed(1)} hours.</p>
+                  <h4 className="font-bold text-lg text-green-600">Operations Normal</h4>
+                  <p className="text-sm opacity-90">Maintenance required in {(SERVICE_INTERVAL - hoursSinceLast).toFixed(1)} engine hours.</p>
                 </div>
               </div>
             )}
 
             <Button 
               size="lg" 
-              className="w-full py-8 text-xl shadow-lg" 
+              className="w-full py-8 text-xl shadow-lg font-headline" 
               onClick={handleRecordService}
-              variant={isServiceWarning ? "default" : "outline"}
+              variant={isServiceWarning || isServiceDue ? "default" : "outline"}
             >
               <RotateCcw className="w-5 h-5 mr-2" />
               Record {nextType} Service Now
@@ -120,42 +179,61 @@ export default function ServicePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-primary" />
-              Machine Config
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <form onSubmit={handleManualHoursUpdate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentHours">Update Engine Hours</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    type="number" 
-                    step="0.1" 
-                    id="currentHours" 
-                    name="currentHours" 
-                    defaultValue={service.currentEngineHours} 
-                  />
-                  <Button type="submit" variant="secondary">Update</Button>
-                </div>
+        <div className="space-y-6">
+          <Card className="border-none shadow-md overflow-hidden bg-black text-white">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-primary">
+                <PackageCheck className="w-5 h-5" />
+                Kits & Lubricants
+              </CardTitle>
+              <CardDescription className="text-gray-400">Requirements for next {nextType} service.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {kits ? (
+                <ul className="space-y-2">
+                  {kits.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm italic text-gray-500">Configure tractor model to view specific parts list.</p>
+              )}
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <p className="text-[10px] uppercase font-bold text-primary tracking-widest">Model Applied</p>
+                <p className="text-sm font-medium">{service.tractorModel}</p>
               </div>
-            </form>
+            </CardContent>
+          </Card>
 
-            <div className="pt-4 border-t space-y-4">
-              <h4 className="text-sm font-bold uppercase text-muted-foreground">Maintenance History</h4>
-              <div className="space-y-2">
-                 <div className="flex items-center justify-between text-sm p-2 bg-secondary rounded">
-                    <span>{service.lastServiceType} Service</span>
-                    <span className="text-muted-foreground">{service.lastServiceHours} hrs</span>
-                 </div>
-                 <p className="text-xs text-center text-muted-foreground italic mt-2">Historical data logged locally</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="border-none shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-primary" />
+                Quick Update
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleManualHoursUpdate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentHours">Current Engine Hours</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type="number" 
+                      step="0.1" 
+                      id="currentHours" 
+                      name="currentHours" 
+                      defaultValue={service.currentEngineHours} 
+                    />
+                    <Button type="submit" variant="secondary">Set</Button>
+                  </div>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

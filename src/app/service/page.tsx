@@ -28,26 +28,32 @@ export default function ServicePage() {
 
   if (!isLoaded) return <div className="p-8 text-center font-headline">Loading service data...</div>;
 
-  const hoursSinceLast = service.currentEngineHours - service.lastServiceHours;
+  // Defensive values for calculation to prevent errors with legacy data
+  const currentHours = service?.currentEngineHours || 0;
+  const lastHours = service?.lastServiceHours || 0;
+  const lastIndex = typeof service?.lastServiceIndex === 'number' ? service.lastServiceIndex : 3;
+  const tractorModel = service?.tractorModel || 'OTHER';
+
+  const hoursSinceLast = currentHours - lastHours;
   const progressPercent = Math.min((hoursSinceLast / SERVICE_INTERVAL) * 100, 100);
   
   const isServiceDue = hoursSinceLast >= SERVICE_INTERVAL;
   const isServiceWarning = hoursSinceLast >= (SERVICE_INTERVAL - ALERT_THRESHOLD);
 
   // Cycle: Minor -> Major -> Minor -> Annual
-  const nextIdx = (service.lastServiceIndex + 1) % 4;
-  const nextType = SERVICE_CYCLE[nextIdx];
+  const nextIdx = (lastIndex + 1) % 4;
+  const nextType = SERVICE_CYCLE[nextIdx] || 'Minor';
 
   const handleRecordService = () => {
     updateService({
       ...service,
-      lastServiceHours: service.currentEngineHours,
+      lastServiceHours: currentHours,
       lastServiceType: nextType,
       lastServiceIndex: nextIdx,
     });
     toast({ 
       title: "Service Recorded", 
-      description: `${nextType} service logged at ${service.currentEngineHours} hours.` 
+      description: `${nextType} service logged at ${currentHours} hours.` 
     });
   };
 
@@ -55,8 +61,10 @@ export default function ServicePage() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const newHours = parseFloat(formData.get("currentHours") as string);
-    updateService({ ...service, currentEngineHours: newHours });
-    toast({ title: "Hours Updated", description: `Current engine hours set to ${newHours}.` });
+    if (!isNaN(newHours)) {
+      updateService({ ...service, currentEngineHours: newHours });
+      toast({ title: "Hours Updated", description: `Current engine hours set to ${newHours}.` });
+    }
   };
 
   const handleModelUpdate = (model: TractorModel) => {
@@ -64,14 +72,17 @@ export default function ServicePage() {
     toast({ title: "Tractor Configured", description: `Model set to ${model}` });
   };
 
-  const kits = service.tractorModel !== 'OTHER' ? SERVICE_KITS[service.tractorModel][nextType] : null;
+  // Safely check if tractorModel is one of the keys in SERVICE_KITS
+  const kits = (tractorModel !== 'OTHER' && SERVICE_KITS[tractorModel as Exclude<TractorModel, 'OTHER'>]) 
+    ? SERVICE_KITS[tractorModel as Exclude<TractorModel, 'OTHER'>][nextType] 
+    : null;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline">Service Management</h1>
-          <p className="text-muted-foreground">Automated logging for {service.tractorModel} maintenance.</p>
+          <p className="text-muted-foreground">Automated logging for {tractorModel} maintenance.</p>
         </div>
         
         <Dialog open={isConfigOpen} onOpenChange={setIsConfigOpen}>
@@ -88,7 +99,7 @@ export default function ServicePage() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Select Tractor Model</Label>
-                <Select value={service.tractorModel} onValueChange={(val) => handleModelUpdate(val as TractorModel)}>
+                <Select value={tractorModel} onValueChange={(val) => handleModelUpdate(val as TractorModel)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
@@ -122,7 +133,7 @@ export default function ServicePage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 p-4 bg-secondary/30 rounded-lg">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-1">Last Completed</p>
-                <p className="text-xl font-headline font-bold">{service.lastServiceType} @ {service.lastServiceHours} hrs</p>
+                <p className="text-xl font-headline font-bold">{(service?.lastServiceType || 'None')} @ {lastHours} hrs</p>
               </div>
               <div className="hidden md:block h-10 w-px bg-border" />
               <div className="text-left md:text-right">
@@ -203,7 +214,7 @@ export default function ServicePage() {
               )}
               <div className="mt-6 pt-4 border-t border-white/10">
                 <p className="text-[10px] uppercase font-bold text-primary tracking-widest">Model Applied</p>
-                <p className="text-sm font-medium">{service.tractorModel}</p>
+                <p className="text-sm font-medium">{tractorModel}</p>
               </div>
             </CardContent>
           </Card>
@@ -225,7 +236,7 @@ export default function ServicePage() {
                       step="0.1" 
                       id="currentHours" 
                       name="currentHours" 
-                      defaultValue={service.currentEngineHours} 
+                      defaultValue={currentHours} 
                     />
                     <Button type="submit" variant="secondary">Set</Button>
                   </div>

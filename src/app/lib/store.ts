@@ -35,6 +35,14 @@ export interface ServiceState {
   tractorModel: TractorModel;
 }
 
+const DEFAULT_SERVICE_STATE: ServiceState = {
+  lastServiceHours: 0,
+  lastServiceType: 'Annual',
+  lastServiceIndex: 3, // Start at end so first recommended is Minor (index 0)
+  currentEngineHours: 0,
+  tractorModel: 'NEW HOLLAND',
+};
+
 export const SERVICE_KITS: Record<Exclude<TractorModel, 'OTHER'>, Record<ServiceType, string[]>> = {
   'NEW HOLLAND': {
     'Minor': ['Air Filter (Outer)', 'Engine Oil Filter', '2 Fuel Filters', '10L Engine Oil 15W40'],
@@ -58,13 +66,7 @@ const STORAGE_KEY_SERVICE = 'tractor_service_v1';
 
 export function useTractorData() {
   const [operations, setOperations] = useState<Operation[]>([]);
-  const [service, setService] = useState<ServiceState>({
-    lastServiceHours: 0,
-    lastServiceType: 'Annual',
-    lastServiceIndex: 3, // Start at end so first recommended is Minor (index 0)
-    currentEngineHours: 0,
-    tractorModel: 'NEW HOLLAND',
-  });
+  const [service, setService] = useState<ServiceState>(DEFAULT_SERVICE_STATE);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -72,10 +74,24 @@ export function useTractorData() {
     const storedService = localStorage.getItem(STORAGE_KEY_SERVICE);
 
     if (storedOps) {
-      setOperations(JSON.parse(storedOps));
+      try {
+        setOperations(JSON.parse(storedOps));
+      } catch (e) {
+        console.error("Failed to parse operations data", e);
+      }
     }
+    
     if (storedService) {
-      setService(JSON.parse(storedService));
+      try {
+        const parsed = JSON.parse(storedService);
+        // Merge with defaults to handle missing keys in older data versions
+        setService({
+          ...DEFAULT_SERVICE_STATE,
+          ...parsed
+        });
+      } catch (e) {
+        console.error("Failed to parse service data", e);
+      }
     }
     setIsLoaded(true);
   }, []);
@@ -86,7 +102,7 @@ export function useTractorData() {
     
     if (newOps.length > 0) {
       const maxHours = Math.max(...newOps.map(o => o.engineHours || 0));
-      if (maxHours > service.currentEngineHours) {
+      if (maxHours > (service?.currentEngineHours || 0)) {
         updateService({ ...service, currentEngineHours: maxHours });
       }
     }

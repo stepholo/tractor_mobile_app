@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useTractorData } from "@/app/lib/store";
@@ -67,7 +66,7 @@ export default function Dashboard() {
           title="Net Profit" 
           value={`KSh ${netProfit.toLocaleString()}`} 
           icon={<BadgeDollarSign className="w-5 h-5" />} 
-          description="Revenue - Expenses"
+          description="Total Rental Fees - Expenses"
         />
         <StatCard 
           title="Avg Profit/Acre" 

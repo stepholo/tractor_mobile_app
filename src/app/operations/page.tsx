@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,7 @@ import {
   DialogTitle, 
   DialogTrigger
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, Search, Filter } from "lucide-react";
+import { Plus, Trash2, Edit2, Search } from "lucide-react";
 import { format } from "date-fns";
 import { 
   Table, 
@@ -36,14 +35,17 @@ export default function OperationsPage() {
   // Local form state for auto-calculation
   const [selectedImplement, setSelectedImplement] = useState<string>("");
   const [rate, setRate] = useState<number>(0);
+  const [acres, setAcres] = useState<number>(0);
 
   useEffect(() => {
     if (editingOp) {
       setSelectedImplement(editingOp.implement);
       setRate(editingOp.costPerAcre);
+      setAcres(editingOp.acres);
     } else {
       setSelectedImplement("");
       setRate(0);
+      setAcres(0);
     }
   }, [editingOp]);
 
@@ -68,6 +70,7 @@ export default function OperationsPage() {
     setEditingOp(null);
     setSelectedImplement("");
     setRate(0);
+    setAcres(0);
     setIsDialogOpen(true);
   };
 
@@ -75,6 +78,8 @@ export default function OperationsPage() {
     setEditingOp(op);
     setIsDialogOpen(true);
   };
+
+  const calculatedFee = rate * acres;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -87,9 +92,9 @@ export default function OperationsPage() {
       laborCost: parseFloat(formData.get("laborCost") as string) || 0,
       repairCost: parseFloat(formData.get("repairCost") as string) || 0,
       implement: selectedImplement || "Other",
-      acres: parseFloat(formData.get("acres") as string) || 0,
+      acres: acres,
       costPerAcre: rate,
-      amountPaid: parseFloat(formData.get("amountPaid") as string) || 0,
+      amountPaid: calculatedFee, // Now matches calculated fee
     };
 
     if (editingOp) {
@@ -150,7 +155,16 @@ export default function OperationsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="acres">Acres Completed</Label>
-                <Input type="number" step="0.01" id="acres" name="acres" placeholder="0.00" required defaultValue={editingOp?.acres || ""} />
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  id="acres" 
+                  name="acres" 
+                  placeholder="0.00" 
+                  required 
+                  value={acres} 
+                  onChange={(e) => setAcres(parseFloat(e.target.value) || 0)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Farmer Rate (Job Price) (KSh/Acre)</Label>
@@ -161,11 +175,12 @@ export default function OperationsPage() {
                   placeholder="0" 
                   required 
                 />
-                <p className="text-[10px] text-muted-foreground italic">Auto-calculated based on implement.</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amountPaid">Total Amount Paid (KSh)</Label>
-                <Input type="number" step="1" id="amountPaid" name="amountPaid" placeholder="0" required defaultValue={editingOp?.amountPaid || ""} />
+                <Label>Total Rental Fee (Autocalculated)</Label>
+                <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center font-bold text-primary">
+                  KSh {calculatedFee.toLocaleString()}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="fuelCost">Fuel Cost (KSh)</Label>
@@ -210,7 +225,7 @@ export default function OperationsPage() {
                 <TableHead>Implement</TableHead>
                 <TableHead className="text-right">Acres</TableHead>
                 <TableHead className="text-right">Rate</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="text-right">Total Rental Fee</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>

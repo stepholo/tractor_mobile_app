@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useTractorData, TractorModel } from "@/app/lib/store";
@@ -46,13 +45,13 @@ export default function SettingsPage() {
 
     const headers = [
       "Date", "Implement", "Current Engine Hours", "Acres", 
-      "Farmer Rate (KSh)", "Total Revenue (KSh)", "Amount Paid (KSh)", 
+      "Farmer Rate (KSh)", "Total Rental Fee (KSh)", 
       "Fuel Cost (KSh)", "Labor Cost (KSh)", "Repair Cost (KSh)", "Net Profit (KSh)"
     ];
     
     const rows = operations.map(op => [
-      op.date, op.implement, op.engineHours, op.acres.toFixed(2),
-      op.costPerAcre, op.revenue, op.amountPaid || 0,
+      op.date, op.implement, op.engineHours, (op.acres || 0).toFixed(2),
+      op.costPerAcre, op.revenue,
       op.fuelCost, op.laborCost, op.repairCost, op.netProfit
     ]);
 

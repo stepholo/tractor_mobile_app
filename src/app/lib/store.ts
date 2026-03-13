@@ -242,6 +242,16 @@ export function useTractorData() {
     saveOperations(newOps);
   };
 
+  const editLoanPayment = (id: string, updated: Partial<LoanPayment>) => {
+    const newLoans = loans.map(l => {
+      if (l.id === id) {
+        return { ...l, ...updated };
+      }
+      return l;
+    });
+    saveLoans(newLoans);
+  };
+
   return {
     operations,
     loans,
@@ -253,6 +263,7 @@ export function useTractorData() {
     deleteOperation,
     deleteLoanPayment,
     editOperation,
+    editLoanPayment,
     updateService,
     updateProfile,
   };

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,9 +11,10 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger
+  DialogTrigger,
+  DialogDescription
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, Search } from "lucide-react";
+import { Plus, Trash2, Edit2, Search, Info } from "lucide-react";
 import { format } from "date-fns";
 import { 
   Table, 
@@ -25,14 +27,16 @@ import {
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 export default function OperationsPage() {
   const { operations, addOperation, deleteOperation, editOperation, profile, isLoaded } = useTractorData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingOp, setEditingOp] = useState<Operation | null>(null);
+  const [viewingOp, setViewingOp] = useState<Operation | null>(null);
   
-  // Local form state for auto-calculation
   const [selectedImplement, setSelectedImplement] = useState<string>("");
   const [rate, setRate] = useState<number>(0);
   const [acres, setAcres] = useState<number>(0);
@@ -79,6 +83,11 @@ export default function OperationsPage() {
     setIsDialogOpen(true);
   };
 
+  const handleOpenView = (op: Operation) => {
+    setViewingOp(op);
+    setIsViewOpen(true);
+  };
+
   const calculatedFee = rate * acres;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -94,7 +103,7 @@ export default function OperationsPage() {
       implement: selectedImplement || "Other",
       acres: acres,
       costPerAcre: rate,
-      amountPaid: calculatedFee, // Now matches calculated fee
+      amountPaid: calculatedFee,
     };
 
     if (editingOp) {
@@ -130,6 +139,7 @@ export default function OperationsPage() {
               <DialogTitle className="text-2xl font-headline">
                 {editingOp ? "Edit Log Entry" : "Log Daily Operation"}
               </DialogTitle>
+              <DialogDescription>Fill in the details for today's farm work.</DialogDescription>
             </DialogHeader>
             <form key={editingOp?.id || 'new'} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
               <div className="space-y-2">
@@ -204,6 +214,61 @@ export default function OperationsPage() {
         </Dialog>
       </div>
 
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-headline">Operational Record Details</DialogTitle>
+          </DialogHeader>
+          {viewingOp && (
+            <div className="space-y-3 py-4">
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground font-medium">Date</span>
+                <span className="font-bold">{viewingOp.date ? format(new Date(viewingOp.date), 'MMMM dd, yyyy') : 'N/A'}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground font-medium">Implement</span>
+                <span className="font-bold">{viewingOp.implement}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground font-medium">Engine Hours</span>
+                <span className="font-bold">{viewingOp.engineHours.toFixed(1)} hrs</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground font-medium">Acres Covered</span>
+                <span className="font-bold">{viewingOp.acres.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b text-primary">
+                <span className="font-medium">Total Rental Fee</span>
+                <span className="font-bold">KSh {viewingOp.revenue.toLocaleString()}</span>
+              </div>
+              
+              <div className="pt-4 pb-2">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Expenses BreakDown</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Fuel</span>
+                    <span className="font-medium">KSh {viewingOp.fuelCost.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Labor (Operator/Agent)</span>
+                    <span className="font-medium">KSh {viewingOp.laborCost.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Repairs</span>
+                    <span className="font-medium">KSh {viewingOp.repairCost.toLocaleString()}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-bold pt-1">
+                    <span>Net Daily Profit</span>
+                    <span className="text-green-600">KSh {viewingOp.netProfit.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -224,7 +289,6 @@ export default function OperationsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Implement</TableHead>
                 <TableHead className="text-right">Acres</TableHead>
-                <TableHead className="text-right">Rate</TableHead>
                 <TableHead className="text-right">Total Rental Fee</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
@@ -232,14 +296,13 @@ export default function OperationsPage() {
             <TableBody>
               {filteredOps.length > 0 ? (
                 filteredOps.map((op) => (
-                  <TableRow key={op.id}>
+                  <TableRow key={op.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleOpenView(op)}>
                     <TableCell className="font-medium">{op.date ? format(new Date(op.date), 'MM/dd/yy') : 'N/A'}</TableCell>
                     <TableCell>{op.implement || 'N/A'}</TableCell>
                     <TableCell className="text-right">{(op.acres || 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">KSh {(op.costPerAcre || 0).toLocaleString()}</TableCell>
                     <TableCell className="text-right font-bold text-primary">KSh {(op.revenue || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex justify-center gap-2">
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(op)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -257,7 +320,7 @@ export default function OperationsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">
                     No operations logged yet.
                   </TableCell>
                 </TableRow>

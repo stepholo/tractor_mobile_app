@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -24,11 +23,12 @@ export interface Operation {
   repairCost: number;
   implement: string;
   acres: number;
-  farmerRate: number; // Manual entry
-  implementRate: number; // Auto-picked reference
-  revenue: number; // Total Rental Fee (farmerRate * acres)
+  farmerRate: number; // Price per acre charged to the farmer
+  implementRate: number; // Standard reference rate for the implement
+  totalRentalFee: number; // Standard value (implementRate * acres)
+  totalRevenueCollected: number; // Actual income (farmerRate * acres)
   totalExpenses: number;
-  netProfit: number;
+  netProfit: number; // totalRevenueCollected - totalExpenses
   profitPerAcre: number;
   fuelCostPerAcre: number;
 }
@@ -179,17 +179,19 @@ export function useTractorData() {
     updateService({ ...service, tractorModel: newProfile.tractorModel });
   };
 
-  const addOperation = (op: Omit<Operation, 'id' | 'revenue' | 'totalExpenses' | 'netProfit' | 'profitPerAcre' | 'fuelCostPerAcre'>) => {
-    const revenue = (op.farmerRate || 0) * (op.acres || 0);
+  const addOperation = (op: Omit<Operation, 'id' | 'totalRentalFee' | 'totalRevenueCollected' | 'totalExpenses' | 'netProfit' | 'profitPerAcre' | 'fuelCostPerAcre'>) => {
+    const totalRentalFee = (op.implementRate || 0) * (op.acres || 0);
+    const totalRevenueCollected = (op.farmerRate || 0) * (op.acres || 0);
     const totalExpenses = (op.fuelCost || 0) + (op.laborCost || 0) + (op.repairCost || 0);
-    const netProfit = revenue - totalExpenses;
+    const netProfit = totalRevenueCollected - totalExpenses;
     const profitPerAcre = op.acres > 0 ? netProfit / op.acres : 0;
     const fuelCostPerAcre = op.acres > 0 ? (op.fuelCost || 0) / op.acres : 0;
 
     const fullOp: Operation = {
       ...op,
       id: crypto.randomUUID(),
-      revenue,
+      totalRentalFee,
+      totalRevenueCollected,
       totalExpenses,
       netProfit,
       profitPerAcre,
@@ -223,14 +225,16 @@ export function useTractorData() {
     const newOps = operations.map(o => {
       if (o.id === id) {
         const merged = { ...o, ...updated };
-        const revenue = (merged.farmerRate || 0) * (merged.acres || 0);
+        const totalRentalFee = (merged.implementRate || 0) * (merged.acres || 0);
+        const totalRevenueCollected = (merged.farmerRate || 0) * (merged.acres || 0);
         const totalExpenses = (merged.fuelCost || 0) + (merged.laborCost || 0) + (merged.repairCost || 0);
-        const netProfit = revenue - totalExpenses;
+        const netProfit = totalRevenueCollected - totalExpenses;
         const profitPerAcre = merged.acres > 0 ? netProfit / merged.acres : 0;
         const fuelCostPerAcre = merged.acres > 0 ? (merged.fuelCost || 0) / merged.acres : 0;
         return {
           ...merged,
-          revenue,
+          totalRentalFee,
+          totalRevenueCollected,
           totalExpenses,
           netProfit,
           profitPerAcre,

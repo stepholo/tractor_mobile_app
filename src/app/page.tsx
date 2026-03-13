@@ -9,7 +9,8 @@ import {
   BarChart3, 
   History,
   TrendingUp,
-  LandPlot
+  LandPlot,
+  HandCoins
 } from "lucide-react";
 import { 
   BarChart, 
@@ -29,7 +30,8 @@ export default function Dashboard() {
   if (!isLoaded) return <div className="flex items-center justify-center h-screen font-headline">Loading Dashboard...</div>;
 
   const totalAcres = operations.reduce((acc, op) => acc + (op.acres || 0), 0);
-  const totalRevenue = operations.reduce((acc, op) => acc + (op.revenue || 0), 0);
+  const totalRevenue = operations.reduce((acc, op) => acc + (op.totalRevenueCollected || 0), 0);
+  const totalRentalFees = operations.reduce((acc, op) => acc + (op.totalRentalFee || 0), 0);
   const totalExpenses = operations.reduce((acc, op) => acc + (op.totalExpenses || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
   const avgProfitPerAcre = totalAcres > 0 ? netProfit / totalAcres : 0;
@@ -57,28 +59,28 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title="Total Acres" 
-          value={totalAcres.toFixed(2)} 
-          icon={<LandPlot className="w-5 h-5" />} 
-          description="Completed to date"
+          title="Revenue Collected" 
+          value={`KSh ${totalRevenue.toLocaleString()}`} 
+          icon={<HandCoins className="w-5 h-5" />} 
+          description="Actual cash received"
         />
         <StatCard 
           title="Net Profit" 
           value={`KSh ${netProfit.toLocaleString()}`} 
           icon={<BadgeDollarSign className="w-5 h-5" />} 
-          description="Total Rental Fees - Expenses"
+          description="Revenue - Expenses"
         />
         <StatCard 
-          title="Avg Profit/Acre" 
-          value={`KSh ${avgProfitPerAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} 
+          title="Total Rental Fees" 
+          value={`KSh ${totalRentalFees.toLocaleString()}`} 
           icon={<TrendingUp className="w-5 h-5" />} 
-          description="Net efficiency"
+          description="Standard market value"
         />
         <StatCard 
-          title="Engine Hours" 
-          value={(service.currentEngineHours || 0).toFixed(1)} 
-          icon={<Tractor className="w-5 h-5" />} 
-          description="Current reading"
+          title="Total Acres" 
+          value={totalAcres.toFixed(2)} 
+          icon={<LandPlot className="w-5 h-5" />} 
+          description="Completed to date"
         />
       </div>
 
@@ -127,7 +129,7 @@ export default function Dashboard() {
                       <span className="text-xs text-muted-foreground">{op.date ? format(new Date(op.date), 'MMM dd, yyyy') : 'N/A'}</span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="font-bold text-primary">KSh {(op.revenue || 0).toLocaleString()}</span>
+                      <span className="font-bold text-primary">KSh {(op.totalRevenueCollected || 0).toLocaleString()}</span>
                       <span className="text-xs text-muted-foreground">{(op.acres || 0).toFixed(2)} Acres</span>
                     </div>
                   </div>
@@ -143,24 +145,24 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-none shadow-md bg-black text-white p-6 col-span-1 md:col-span-1 flex flex-col justify-between">
            <div>
-             <h3 className="text-primary font-bold uppercase tracking-widest text-xs mb-2">Fuel Efficiency</h3>
+             <h3 className="text-primary font-bold uppercase tracking-widest text-xs mb-2">Efficiency Check</h3>
              <p className="text-lg font-headline">
-               {avgFuelPerAcre > 1500 ? "Fuel costs are higher than average." : "Efficiency is within optimal range."}
+               {avgProfitPerAcre < 1000 ? "Profit margins are currently tight." : "Operating at healthy margins."}
              </p>
            </div>
            <div className="mt-4 flex items-center gap-2">
-             <Droplets className="text-primary w-5 h-5" />
-             <span className="text-sm font-medium">KSh {avgFuelPerAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}/Acre Fuel</span>
+             <Tractor className="text-primary w-5 h-5" />
+             <span className="text-sm font-medium">Avg KSh {avgProfitPerAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}/Acre Profit</span>
            </div>
         </Card>
         
         <Card className="border-none shadow-md p-6 col-span-1 md:col-span-2 flex items-center justify-between">
           <div className="space-y-1">
-            <h3 className="text-muted-foreground text-sm font-medium">Service Progress</h3>
+            <h3 className="text-muted-foreground text-sm font-medium">Engine Usage</h3>
             <p className="text-2xl font-bold font-headline">
-              Next Service in {(250 - ((service.currentEngineHours || 0) % 250)).toFixed(1)} hrs
+              {service.currentEngineHours?.toFixed(1) || "0.0"} Total Hours
             </p>
-            <p className="text-xs text-muted-foreground">Scheduled alert every 250 hours (Next at { (Math.floor((service.currentEngineHours || 0) / 250) + 1) * 250 } hrs)</p>
+            <p className="text-xs text-muted-foreground">Tracked via logs & manual updates</p>
           </div>
           <div className="relative w-16 h-16">
              <svg className="w-full h-full" viewBox="0 0 36 36">

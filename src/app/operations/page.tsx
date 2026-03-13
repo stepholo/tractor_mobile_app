@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -73,7 +72,7 @@ export default function OperationsPage() {
       autoPickedRate = mappedRate;
     }
     setImplementRate(autoPickedRate);
-    // When implement changes, suggest the farmer rate too, but keep it editable
+    // Suggest the farmer rate too for new entries, but keep it editable
     if (!editingOp) {
       setFarmerRate(autoPickedRate);
     }
@@ -98,7 +97,8 @@ export default function OperationsPage() {
     setIsViewOpen(true);
   };
 
-  const calculatedFee = (farmerRate || 0) * (acres || 0);
+  const calculatedRentalFee = (implementRate || 0) * (acres || 0);
+  const calculatedRevenue = (farmerRate || 0) * (acres || 0);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -202,12 +202,23 @@ export default function OperationsPage() {
                   required 
                 />
               </div>
+              
               <div className="space-y-2">
-                <Label>Total Rental Fee (Autocalculated)</Label>
-                <div className="h-10 px-3 py-2 rounded-md border bg-primary/10 flex items-center font-bold text-primary">
-                  KSh {calculatedFee.toLocaleString()}
+                <Label>Total Rental Fee (Standard Cost)</Label>
+                <div className="h-10 px-3 py-2 rounded-md border bg-secondary/50 flex items-center font-bold text-muted-foreground">
+                  KSh {calculatedRentalFee.toLocaleString()}
                 </div>
+                <p className="text-[10px] text-muted-foreground italic">Auto-calculated: Implement Rate × Acres</p>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-primary">Total Revenue Collected (Actual)</Label>
+                <div className="h-10 px-3 py-2 rounded-md border border-primary/20 bg-primary/10 flex items-center font-bold text-primary">
+                  KSh {calculatedRevenue.toLocaleString()}
+                </div>
+                <p className="text-[10px] text-primary italic">Auto-calculated: Farmer Rate × Acres</p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="fuelCost">Fuel Cost (KSh)</Label>
                 <Input type="number" step="1" id="fuelCost" name="fuelCost" placeholder="0" required defaultValue={editingOp?.fuelCost || ""} />
@@ -250,12 +261,22 @@ export default function OperationsPage() {
                 <span className="font-bold">{(viewingOp.acres || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground font-medium">Farmer Rate</span>
-                <span className="font-bold">KSh {(viewingOp.farmerRate || 0).toLocaleString()}/Acre</span>
+                <span className="text-muted-foreground font-medium text-xs">Implement Rate</span>
+                <span className="font-medium text-sm">KSh {(viewingOp.implementRate || 0).toLocaleString()}/Acre</span>
               </div>
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-muted-foreground font-medium text-xs">Farmer Rate</span>
+                <span className="font-medium text-sm">KSh {(viewingOp.farmerRate || 0).toLocaleString()}/Acre</span>
+              </div>
+              
+              <div className="flex justify-between items-center py-2 border-b text-muted-foreground">
+                <span className="font-medium">Total Rental Fee (Standard)</span>
+                <span className="font-bold">KSh {(viewingOp.totalRentalFee || 0).toLocaleString()}</span>
+              </div>
+
               <div className="flex justify-between items-center py-2 border-b text-primary">
-                <span className="font-medium">Total Rental Fee</span>
-                <span className="font-bold">KSh {(viewingOp.revenue || 0).toLocaleString()}</span>
+                <span className="font-medium">Total Revenue Collected</span>
+                <span className="font-bold">KSh {(viewingOp.totalRevenueCollected || 0).toLocaleString()}</span>
               </div>
               
               <div className="pt-4 pb-2">
@@ -305,7 +326,7 @@ export default function OperationsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Implement</TableHead>
                 <TableHead className="text-right">Acres</TableHead>
-                <TableHead className="text-right">Total Rental Fee</TableHead>
+                <TableHead className="text-right">Total Revenue</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -316,7 +337,7 @@ export default function OperationsPage() {
                     <TableCell className="font-medium">{op.date ? format(new Date(op.date), 'MM/dd/yy') : 'N/A'}</TableCell>
                     <TableCell>{op.implement || 'N/A'}</TableCell>
                     <TableCell className="text-right">{(op.acres || 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-right font-bold text-primary">KSh {(op.revenue || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-bold text-primary">KSh {(op.totalRevenueCollected || 0).toLocaleString()}</TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(op)}>

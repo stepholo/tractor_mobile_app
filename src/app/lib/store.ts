@@ -173,10 +173,16 @@ export function useTractorData() {
     localStorage.setItem(STORAGE_KEY_SERVICE, JSON.stringify(newService));
   };
 
-  const updateProfile = (newProfile: UserProfile) => {
+  const updateProfile = (newProfile: UserProfile, initialService?: Partial<ServiceState>) => {
     setProfile(newProfile);
     localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(newProfile));
-    updateService({ ...service, tractorModel: newProfile.tractorModel });
+    
+    const serviceUpdate = { 
+      ...service, 
+      tractorModel: newProfile.tractorModel,
+      ...initialService 
+    };
+    updateService(serviceUpdate);
   };
 
   const addOperation = (op: Omit<Operation, 'id' | 'totalRentalFee' | 'totalRevenueCollected' | 'totalExpenses' | 'netProfit' | 'profitPerAcre' | 'fuelCostPerAcre'>) => {

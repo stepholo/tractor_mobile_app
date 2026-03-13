@@ -38,17 +38,20 @@ export default function OperationsPage() {
   const [viewingOp, setViewingOp] = useState<Operation | null>(null);
   
   const [selectedImplement, setSelectedImplement] = useState<string>("");
-  const [rate, setRate] = useState<number>(0);
+  const [implementRate, setImplementRate] = useState<number>(0);
+  const [farmerRate, setFarmerRate] = useState<number>(0);
   const [acres, setAcres] = useState<number>(0);
 
   useEffect(() => {
     if (editingOp) {
       setSelectedImplement(editingOp.implement);
-      setRate(editingOp.costPerAcre);
-      setAcres(editingOp.acres);
+      setImplementRate(editingOp.implementRate || 0);
+      setFarmerRate(editingOp.farmerRate || 0);
+      setAcres(editingOp.acres || 0);
     } else {
       setSelectedImplement("");
-      setRate(0);
+      setImplementRate(0);
+      setFarmerRate(0);
       setAcres(0);
     }
   }, [editingOp]);
@@ -63,17 +66,24 @@ export default function OperationsPage() {
   const handleImplementChange = (val: string) => {
     setSelectedImplement(val);
     const mappedRate = IMPLEMENT_RATES[val];
+    let autoPickedRate = 0;
     if (mappedRate === 'default') {
-      setRate(profile.defaultRepaymentRate);
+      autoPickedRate = profile.defaultRepaymentRate;
     } else if (typeof mappedRate === 'number') {
-      setRate(mappedRate);
+      autoPickedRate = mappedRate;
+    }
+    setImplementRate(autoPickedRate);
+    // When implement changes, suggest the farmer rate too, but keep it editable
+    if (!editingOp) {
+      setFarmerRate(autoPickedRate);
     }
   };
 
   const handleOpenNew = () => {
     setEditingOp(null);
     setSelectedImplement("");
-    setRate(0);
+    setImplementRate(0);
+    setFarmerRate(0);
     setAcres(0);
     setIsDialogOpen(true);
   };
@@ -88,7 +98,7 @@ export default function OperationsPage() {
     setIsViewOpen(true);
   };
 
-  const calculatedFee = rate * acres;
+  const calculatedFee = (farmerRate || 0) * (acres || 0);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -102,8 +112,8 @@ export default function OperationsPage() {
       repairCost: parseFloat(formData.get("repairCost") as string) || 0,
       implement: selectedImplement || "Other",
       acres: acres,
-      costPerAcre: rate,
-      amountPaid: calculatedFee,
+      farmerRate: farmerRate,
+      implementRate: implementRate,
     };
 
     if (editingOp) {
@@ -160,6 +170,12 @@ export default function OperationsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Implement Rate (Reference - KSh/Acre)</Label>
+                <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center font-medium italic">
+                  KSh {(implementRate || 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="engineHours">Current Engine Hours</Label>
                 <Input type="number" step="0.1" id="engineHours" name="engineHours" placeholder="0.0" required defaultValue={editingOp?.engineHours || ""} />
               </div>
@@ -172,7 +188,7 @@ export default function OperationsPage() {
                   name="acres" 
                   placeholder="0.00" 
                   required 
-                  value={acres} 
+                  value={acres || ""} 
                   onChange={(e) => setAcres(parseFloat(e.target.value) || 0)}
                 />
               </div>
@@ -180,15 +196,15 @@ export default function OperationsPage() {
                 <Label>Farmer Rate (Job Price) (KSh/Acre)</Label>
                 <Input 
                   type="number" 
-                  value={rate} 
-                  onChange={(e) => setRate(parseFloat(e.target.value) || 0)} 
+                  value={farmerRate || ""} 
+                  onChange={(e) => setFarmerRate(parseFloat(e.target.value) || 0)} 
                   placeholder="0" 
                   required 
                 />
               </div>
               <div className="space-y-2">
                 <Label>Total Rental Fee (Autocalculated)</Label>
-                <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center font-bold text-primary">
+                <div className="h-10 px-3 py-2 rounded-md border bg-primary/10 flex items-center font-bold text-primary">
                   KSh {calculatedFee.toLocaleString()}
                 </div>
               </div>
@@ -230,16 +246,16 @@ export default function OperationsPage() {
                 <span className="font-bold">{viewingOp.implement}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground font-medium">Engine Hours</span>
-                <span className="font-bold">{viewingOp.engineHours.toFixed(1)} hrs</span>
+                <span className="text-muted-foreground font-medium">Acres Covered</span>
+                <span className="font-bold">{(viewingOp.acres || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground font-medium">Acres Covered</span>
-                <span className="font-bold">{viewingOp.acres.toFixed(2)}</span>
+                <span className="text-muted-foreground font-medium">Farmer Rate</span>
+                <span className="font-bold">KSh {(viewingOp.farmerRate || 0).toLocaleString()}/Acre</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b text-primary">
                 <span className="font-medium">Total Rental Fee</span>
-                <span className="font-bold">KSh {viewingOp.revenue.toLocaleString()}</span>
+                <span className="font-bold">KSh {(viewingOp.revenue || 0).toLocaleString()}</span>
               </div>
               
               <div className="pt-4 pb-2">
@@ -247,20 +263,20 @@ export default function OperationsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Fuel</span>
-                    <span className="font-medium">KSh {viewingOp.fuelCost.toLocaleString()}</span>
+                    <span className="font-medium">KSh {(viewingOp.fuelCost || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Labor (Operator/Agent)</span>
-                    <span className="font-medium">KSh {viewingOp.laborCost.toLocaleString()}</span>
+                    <span className="font-medium">KSh {(viewingOp.laborCost || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Repairs</span>
-                    <span className="font-medium">KSh {viewingOp.repairCost.toLocaleString()}</span>
+                    <span className="font-medium">KSh {(viewingOp.repairCost || 0).toLocaleString()}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between font-bold pt-1">
                     <span>Net Daily Profit</span>
-                    <span className="text-green-600">KSh {viewingOp.netProfit.toLocaleString()}</span>
+                    <span className="text-green-600">KSh {(viewingOp.netProfit || 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>

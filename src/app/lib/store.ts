@@ -24,9 +24,9 @@ export interface Operation {
   repairCost: number;
   implement: string;
   acres: number;
-  costPerAcre: number;
-  revenue: number;
-  amountPaid: number;
+  farmerRate: number; // Manual entry
+  implementRate: number; // Auto-picked reference
+  revenue: number; // Total Rental Fee (farmerRate * acres)
   totalExpenses: number;
   netProfit: number;
   profitPerAcre: number;
@@ -43,7 +43,7 @@ export interface LoanPayment {
 export interface ServiceState {
   lastServiceHours: number;
   lastServiceType: ServiceType;
-  lastServiceIndex: number; // Index in SERVICE_CYCLE (0-3)
+  lastServiceIndex: number;
   currentEngineHours: number;
   tractorModel: TractorModel;
 }
@@ -60,7 +60,7 @@ const DEFAULT_PROFILE: UserProfile = {
   name: '',
   phone: '',
   tractorModel: 'OTHER',
-  defaultRepaymentRate: 2500, // Common default in Kenya
+  defaultRepaymentRate: 2500,
 };
 
 export const IMPLEMENT_RATES: Record<string, number | 'default'> = {
@@ -180,7 +180,7 @@ export function useTractorData() {
   };
 
   const addOperation = (op: Omit<Operation, 'id' | 'revenue' | 'totalExpenses' | 'netProfit' | 'profitPerAcre' | 'fuelCostPerAcre'>) => {
-    const revenue = (op.costPerAcre || 0) * (op.acres || 0);
+    const revenue = (op.farmerRate || 0) * (op.acres || 0);
     const totalExpenses = (op.fuelCost || 0) + (op.laborCost || 0) + (op.repairCost || 0);
     const netProfit = revenue - totalExpenses;
     const profitPerAcre = op.acres > 0 ? netProfit / op.acres : 0;
@@ -223,7 +223,7 @@ export function useTractorData() {
     const newOps = operations.map(o => {
       if (o.id === id) {
         const merged = { ...o, ...updated };
-        const revenue = (merged.costPerAcre || 0) * (merged.acres || 0);
+        const revenue = (merged.farmerRate || 0) * (merged.acres || 0);
         const totalExpenses = (merged.fuelCost || 0) + (merged.laborCost || 0) + (merged.repairCost || 0);
         const netProfit = revenue - totalExpenses;
         const profitPerAcre = merged.acres > 0 ? netProfit / merged.acres : 0;

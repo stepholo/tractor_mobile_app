@@ -16,6 +16,7 @@ export function Onboarding() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [model, setModel] = useState<TractorModel>("NEW HOLLAND");
+  const [repaymentRate, setRepaymentRate] = useState("2500");
 
   useEffect(() => {
     if (isLoaded && !profile.name) {
@@ -26,7 +27,12 @@ export function Onboarding() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (name && phone && model) {
-      updateProfile({ name, phone, tractorModel: model });
+      updateProfile({ 
+        name, 
+        phone, 
+        tractorModel: model, 
+        defaultRepaymentRate: parseFloat(repaymentRate) || 2500 
+      });
       setIsOpen(false);
     }
   };
@@ -40,7 +46,7 @@ export function Onboarding() {
           </div>
           <DialogTitle className="text-center text-2xl font-headline">Welcome to Tractor Pro</DialogTitle>
           <DialogDescription className="text-center">
-            Let's set up your profile to manage your farm operations efficiently.
+            Set up your profile to manage farm operations and loan repayments.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSave} className="space-y-4 py-4">
@@ -78,6 +84,18 @@ export function Onboarding() {
                 <SelectItem value="OTHER">Other / Custom</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="repaymentRate">Default Repayment Rate (KSh/Acre)</Label>
+            <Input 
+              id="repaymentRate" 
+              type="number" 
+              required 
+              value={repaymentRate} 
+              onChange={(e) => setRepaymentRate(e.target.value)}
+              placeholder="2500"
+            />
+            <p className="text-[10px] text-muted-foreground">Used for Ploughing and Rotavation tasks.</p>
           </div>
           <Button type="submit" className="w-full py-6 text-lg">
             Complete Setup

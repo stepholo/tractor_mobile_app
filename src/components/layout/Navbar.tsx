@@ -3,15 +3,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ClipboardList, Wrench, Settings } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Wrench, Settings, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Home', href: '/', icon: LayoutDashboard },
     { name: 'Logs', href: '/operations', icon: ClipboardList },
+    { name: 'Loans', href: '/loans', icon: Wallet },
     { name: 'Service', href: '/service', icon: Wrench },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

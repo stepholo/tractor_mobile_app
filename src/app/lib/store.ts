@@ -12,6 +12,7 @@ export interface UserProfile {
   name: string;
   phone: string;
   tractorModel: TractorModel;
+  defaultRepaymentRate: number;
 }
 
 export interface Operation {
@@ -26,11 +27,17 @@ export interface Operation {
   costPerAcre: number;
   revenue: number;
   amountPaid: number;
-  mpesaCode: string;
   totalExpenses: number;
   netProfit: number;
   profitPerAcre: number;
   fuelCostPerAcre: number;
+}
+
+export interface LoanPayment {
+  id: string;
+  date: string;
+  amount: number;
+  mpesaCode: string;
 }
 
 export interface ServiceState {
@@ -53,6 +60,22 @@ const DEFAULT_PROFILE: UserProfile = {
   name: '',
   phone: '',
   tractorModel: 'OTHER',
+  defaultRepaymentRate: 2500, // Common default in Kenya
+};
+
+export const IMPLEMENT_RATES: Record<string, number | 'default'> = {
+  'Ploughing': 'default',
+  'Disc Plough': 'default',
+  'Rotavator': 'default',
+  'Harrowing': 650,
+  'Furrowing': 650,
+  'Planting': 650,
+  'Spraying': 380,
+  'Spreading': 500,
+  'Ridging': 800,
+  'Ripping': 800,
+  'Chisel': 800,
+  'Other': 0
 };
 
 export const SERVICE_KITS: Record<Exclude<TractorModel, 'OTHER'>, Record<ServiceType, string[]>> = {
@@ -73,12 +96,14 @@ export const SERVICE_KITS: Record<Exclude<TractorModel, 'OTHER'>, Record<Service
   }
 };
 
-const STORAGE_KEY_OPERATIONS = 'tractor_operations_v1';
-const STORAGE_KEY_SERVICE = 'tractor_service_v1';
-const STORAGE_KEY_PROFILE = 'tractor_profile_v1';
+const STORAGE_KEY_OPERATIONS = 'tractor_operations_v2';
+const STORAGE_KEY_SERVICE = 'tractor_service_v2';
+const STORAGE_KEY_PROFILE = 'tractor_profile_v2';
+const STORAGE_KEY_LOANS = 'tractor_loans_v2';
 
 export function useTractorData() {
   const [operations, setOperations] = useState<Operation[]>([]);
+  const [loans, setLoans] = useState<LoanPayment[]>([]);
   const [service, setService] = useState<ServiceState>(DEFAULT_SERVICE_STATE);
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -87,6 +112,7 @@ export function useTractorData() {
     const storedOps = localStorage.getItem(STORAGE_KEY_OPERATIONS);
     const storedService = localStorage.getItem(STORAGE_KEY_SERVICE);
     const storedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
+    const storedLoans = localStorage.getItem(STORAGE_KEY_LOANS);
 
     if (storedOps) {
       try {
@@ -96,6 +122,14 @@ export function useTractorData() {
       }
     }
     
+    if (storedLoans) {
+      try {
+        setLoans(JSON.parse(storedLoans));
+      } catch (e) {
+        console.error("Failed to parse loans data", e);
+      }
+    }
+
     if (storedService) {
       try {
         const parsed = JSON.parse(storedService);
@@ -129,6 +163,11 @@ export function useTractorData() {
     }
   };
 
+  const saveLoans = (newLoans: LoanPayment[]) => {
+    setLoans(newLoans);
+    localStorage.setItem(STORAGE_KEY_LOANS, JSON.stringify(newLoans));
+  };
+
   const updateService = (newService: ServiceState) => {
     setService(newService);
     localStorage.setItem(STORAGE_KEY_SERVICE, JSON.stringify(newService));
@@ -137,8 +176,6 @@ export function useTractorData() {
   const updateProfile = (newProfile: UserProfile) => {
     setProfile(newProfile);
     localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(newProfile));
-    
-    // Sync tractor model to service state as well
     updateService({ ...service, tractorModel: newProfile.tractorModel });
   };
 
@@ -163,9 +200,23 @@ export function useTractorData() {
     saveOperations(newOps);
   };
 
+  const addLoanPayment = (payment: Omit<LoanPayment, 'id'>) => {
+    const fullPayment: LoanPayment = {
+      ...payment,
+      id: crypto.randomUUID(),
+    };
+    const newLoans = [fullPayment, ...loans];
+    saveLoans(newLoans);
+  };
+
   const deleteOperation = (id: string) => {
     const newOps = operations.filter(o => o.id !== id);
     saveOperations(newOps);
+  };
+
+  const deleteLoanPayment = (id: string) => {
+    const newLoans = loans.filter(l => l.id !== id);
+    saveLoans(newLoans);
   };
 
   const editOperation = (id: string, updated: Partial<Operation>) => {
@@ -193,11 +244,14 @@ export function useTractorData() {
 
   return {
     operations,
+    loans,
     service,
     profile,
     isLoaded,
     addOperation,
+    addLoanPayment,
     deleteOperation,
+    deleteLoanPayment,
     editOperation,
     updateService,
     updateProfile,

@@ -294,6 +294,10 @@ export default function OperationsPage() {
                     <span>Repairs</span>
                     <span className="font-medium">KSh {(viewingOp.repairCost || 0).toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between text-sm italic">
+                    <span>Rental Fee (Standard Cost)</span>
+                    <span className="font-medium">KSh {(viewingOp.totalRentalFee || 0).toLocaleString()}</span>
+                  </div>
                   <Separator />
                   <div className="flex justify-between font-bold pt-1">
                     <span>Net Daily Profit</span>

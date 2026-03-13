@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -52,27 +51,27 @@ export default function LoansPage() {
 
     addLoanPayment(data);
     setIsDialogOpen(false);
-    toast({ title: "Loan Payment Recorded" });
+    toast({ title: "Payment Recorded" });
   };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Tractor Loan Payments</h1>
-          <p className="text-muted-foreground">Track Hello Tractor loan repayments.</p>
+          <h1 className="text-3xl font-bold font-headline">Tractor Payments</h1>
+          <p className="text-muted-foreground">Track payments for your tractor loan.</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button size="lg" className="rounded-full shadow-lg h-14 w-full md:w-auto px-8">
               <Plus className="w-5 h-5 mr-2" />
-              New Loan Payment
+              New Payment
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-2xl font-headline">Record Loan Payment</DialogTitle>
+              <DialogTitle className="text-2xl font-headline">Record Payment</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 py-4">
               <div className="space-y-2">
@@ -95,7 +94,7 @@ export default function LoansPage() {
 
       <Card className="bg-black text-white p-6 border-none shadow-lg flex items-center justify-between">
         <div>
-          <p className="text-primary text-xs font-bold uppercase tracking-widest mb-1">Total Loan Repaid</p>
+          <p className="text-primary text-xs font-bold uppercase tracking-widest mb-1">Total Amount paid</p>
           <h2 className="text-4xl font-bold font-headline">KSh {totalLoanPaid.toLocaleString()}</h2>
         </div>
         <div className="p-4 bg-primary/20 rounded-full">
@@ -118,7 +117,7 @@ export default function LoansPage() {
           <Table>
             <TableHeader className="bg-secondary/30">
               <TableRow>
-                <TableHead>Date</TableHead>
+                <TableHead>Date of payment</TableHead>
                 <TableHead className="text-right">Amount (KSh)</TableHead>
                 <TableHead>M-Pesa Code</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
@@ -136,7 +135,7 @@ export default function LoansPage() {
                         variant="ghost" 
                         size="icon" 
                         className="text-destructive"
-                        onClick={() => { if(confirm("Delete?")) deleteLoanPayment(l.id); }}
+                        onClick={() => { if(confirm("Delete this payment?")) deleteLoanPayment(l.id); }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -146,7 +145,7 @@ export default function LoansPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="h-32 text-center text-muted-foreground italic">
-                    No loan payments recorded yet.
+                    No payments recorded yet.
                   </TableCell>
                 </TableRow>
               )}

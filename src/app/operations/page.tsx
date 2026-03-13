@@ -72,7 +72,6 @@ export default function OperationsPage() {
       autoPickedRate = mappedRate;
     }
     setImplementRate(autoPickedRate);
-    // Suggest the farmer rate too for new entries, but keep it editable
     if (!editingOp) {
       setFarmerRate(autoPickedRate);
     }
@@ -260,48 +259,45 @@ export default function OperationsPage() {
                 <span className="text-muted-foreground font-medium">Acres Covered</span>
                 <span className="font-bold">{(viewingOp.acres || 0).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground font-medium text-xs">Implement Rate</span>
-                <span className="font-medium text-sm">KSh {(viewingOp.implementRate || 0).toLocaleString()}/Acre</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground font-medium text-xs">Farmer Rate</span>
-                <span className="font-medium text-sm">KSh {(viewingOp.farmerRate || 0).toLocaleString()}/Acre</span>
-              </div>
-              
-              <div className="flex justify-between items-center py-2 border-b text-muted-foreground">
-                <span className="font-medium">Total Rental Fee (Standard)</span>
-                <span className="font-bold">KSh {(viewingOp.totalRentalFee || 0).toLocaleString()}</span>
-              </div>
-
-              <div className="flex justify-between items-center py-2 border-b text-primary">
-                <span className="font-medium">Total Revenue Collected</span>
-                <span className="font-bold">KSh {(viewingOp.totalRevenueCollected || 0).toLocaleString()}</span>
-              </div>
               
               <div className="pt-4 pb-2">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Expenses BreakDown</h4>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Finance Breakdown</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Fuel</span>
-                    <span className="font-medium">KSh {(viewingOp.fuelCost || 0).toLocaleString()}</span>
+                    <span className="text-muted-foreground">Farmer Rate</span>
+                    <span>KSh {(viewingOp.farmerRate || 0).toLocaleString()}/Acre</span>
                   </div>
                   <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Revenue Collected</span>
+                    <span className="font-bold text-primary">KSh {(viewingOp.totalRevenueCollected || 0).toLocaleString()}</span>
+                  </div>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between text-xs italic text-muted-foreground">
+                    <span>Fuel Cost</span>
+                    <span>KSh {(viewingOp.fuelCost || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs italic text-muted-foreground">
                     <span>Labor (Operator/Agent)</span>
-                    <span className="font-medium">KSh {(viewingOp.laborCost || 0).toLocaleString()}</span>
+                    <span>KSh {(viewingOp.laborCost || 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Repairs</span>
-                    <span className="font-medium">KSh {(viewingOp.repairCost || 0).toLocaleString()}</span>
+                  <div className="flex justify-between text-xs italic text-muted-foreground">
+                    <span>Repair Costs</span>
+                    <span>KSh {(viewingOp.repairCost || 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm italic">
-                    <span>Rental Fee (Standard Cost)</span>
-                    <span className="font-medium">KSh {(viewingOp.totalRentalFee || 0).toLocaleString()}</span>
+                  <div className="flex justify-between text-xs italic text-muted-foreground">
+                    <span>Rental Fee (Standard)</span>
+                    <span>KSh {(viewingOp.totalRentalFee || 0).toLocaleString()}</span>
                   </div>
-                  <Separator />
-                  <div className="flex justify-between font-bold pt-1">
-                    <span>Net Daily Profit</span>
-                    <span className="text-green-600">KSh {(viewingOp.netProfit || 0).toLocaleString()}</span>
+                  <Separator className="my-2" />
+                  <div className="flex justify-between font-bold">
+                    <span>Total Expenses</span>
+                    <span className="text-muted-foreground">KSh {(viewingOp.totalExpenses || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg pt-1">
+                    <span>Net Profit</span>
+                    <span className={(viewingOp.netProfit || 0) >= 0 ? "text-green-600" : "text-destructive"}>
+                      KSh {(viewingOp.netProfit || 0).toLocaleString()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -331,6 +327,8 @@ export default function OperationsPage() {
                 <TableHead>Implement</TableHead>
                 <TableHead className="text-right">Acres</TableHead>
                 <TableHead className="text-right">Total Revenue</TableHead>
+                <TableHead className="text-right">Total Expenses</TableHead>
+                <TableHead className="text-right">Net Profit</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -342,6 +340,10 @@ export default function OperationsPage() {
                     <TableCell>{op.implement || 'N/A'}</TableCell>
                     <TableCell className="text-right">{(op.acres || 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right font-bold text-primary">KSh {(op.totalRevenueCollected || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-right text-muted-foreground italic">KSh {(op.totalExpenses || 0).toLocaleString()}</TableCell>
+                    <TableCell className={`text-right font-bold ${(op.netProfit || 0) >= 0 ? "text-green-600" : "text-destructive"}`}>
+                      KSh {(op.netProfit || 0).toLocaleString()}
+                    </TableCell>
                     <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(op)}>
@@ -361,7 +363,7 @@ export default function OperationsPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground italic">
                     No operations logged yet.
                   </TableCell>
                 </TableRow>

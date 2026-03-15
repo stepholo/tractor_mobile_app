@@ -1,16 +1,18 @@
+
 "use client";
 
 import { useTractorData } from "@/app/lib/store";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { 
   Tractor, 
-  Droplets, 
   BadgeDollarSign, 
   BarChart3, 
   History,
   TrendingUp,
   LandPlot,
-  HandCoins
+  HandCoins,
+  User,
+  AlertCircle
 } from "lucide-react";
 import { 
   BarChart, 
@@ -23,9 +25,11 @@ import {
 } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Dashboard() {
-  const { operations, service, isLoaded } = useTractorData();
+  const { operations, service, profile, isLoaded } = useTractorData();
 
   if (!isLoaded) return <div className="flex items-center justify-center h-screen font-headline">Loading Dashboard...</div>;
 
@@ -35,9 +39,7 @@ export default function Dashboard() {
   const totalExpenses = operations.reduce((acc, op) => acc + (op.totalExpenses || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
   const avgProfitPerAcre = totalAcres > 0 ? netProfit / totalAcres : 0;
-  const avgFuelPerAcre = totalAcres > 0 ? operations.reduce((acc, op) => acc + (op.fuelCost || 0), 0) / totalAcres : 0;
 
-  // Implement Summary
   const implementDataMap = operations.reduce((acc: any, op) => {
     const name = op.implement || 'Unknown';
     if (!acc[name]) acc[name] = { name, acres: 0, profit: 0 };
@@ -46,15 +48,38 @@ export default function Dashboard() {
     return acc;
   }, {});
   const implementData = Object.values(implementDataMap);
-
-  // Recent Ops
   const recentOps = operations.slice(0, 5);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-headline">Operational Overview</h1>
-        <p className="text-muted-foreground">Key metrics for your tractor operations in Kenya Shillings.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-primary mb-1">
+            <User className="w-4 h-4" />
+            <span className="text-sm font-bold uppercase tracking-widest">
+              {profile.name || "Tractor Owner"}
+            </span>
+          </div>
+          <h1 className="text-3xl font-bold font-headline">
+            {profile.tractorModel || "My Tractor"} Overview
+          </h1>
+          <p className="text-muted-foreground">Operational performance in Kenya Shillings.</p>
+        </div>
+
+        {!profile.isOnboarded && (
+          <Card className="bg-destructive/10 border-destructive/20 p-4 max-w-sm">
+            <div className="flex gap-3">
+              <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Profile Incomplete</p>
+                <p className="text-xs text-muted-foreground">Please complete your profile in settings to enable all features.</p>
+                <Button asChild size="sm" variant="destructive" className="w-full">
+                  <Link href="/settings">Complete Profile</Link>
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -68,19 +93,19 @@ export default function Dashboard() {
           title="Net Profit" 
           value={`KSh ${netProfit.toLocaleString()}`} 
           icon={<BadgeDollarSign className="w-5 h-5" />} 
-          description="Revenue - Expenses"
+          description="Revenue - All Expenses"
         />
         <StatCard 
-          title="Total Rental Fees" 
+          title="Rental Value" 
           value={`KSh ${totalRentalFees.toLocaleString()}`} 
           icon={<TrendingUp className="w-5 h-5" />} 
-          description="Standard market value"
+          description="Standard equipment fee"
         />
         <StatCard 
           title="Total Acres" 
           value={totalAcres.toFixed(2)} 
           icon={<LandPlot className="w-5 h-5" />} 
-          description="Completed to date"
+          description="Area covered to date"
         />
       </div>
 
@@ -135,7 +160,7 @@ export default function Dashboard() {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-8 text-muted-foreground italic">No recent records found.</div>
+                <div className="text-center py-8 text-muted-foreground italic">No records found.</div>
               )}
             </div>
           </CardContent>
@@ -147,12 +172,12 @@ export default function Dashboard() {
            <div>
              <h3 className="text-primary font-bold uppercase tracking-widest text-xs mb-2">Efficiency Check</h3>
              <p className="text-lg font-headline">
-               {avgProfitPerAcre < 1000 ? "Profit margins are currently tight." : "Operating at healthy margins."}
+               {avgProfitPerAcre < 1000 ? "Operating with tight margins." : "Operating at healthy margins."}
              </p>
            </div>
            <div className="mt-4 flex items-center gap-2">
              <Tractor className="text-primary w-5 h-5" />
-             <span className="text-sm font-medium">Avg KSh {avgProfitPerAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}/Acre Profit</span>
+             <span className="text-sm font-medium">Avg KSh {avgProfitPerAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}/Ac Net</span>
            </div>
         </Card>
         
@@ -162,7 +187,7 @@ export default function Dashboard() {
             <p className="text-2xl font-bold font-headline">
               {service.currentEngineHours?.toFixed(1) || "0.0"} Total Hours
             </p>
-            <p className="text-xs text-muted-foreground">Tracked via logs & manual updates</p>
+            <p className="text-xs text-muted-foreground">Tracked via daily work logs</p>
           </div>
           <div className="relative w-16 h-16">
              <svg className="w-full h-full" viewBox="0 0 36 36">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,10 +11,9 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogDescription
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, Search, Info } from "lucide-react";
+import { Plus, Trash2, Edit2, Search, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { 
   Table, 
@@ -27,6 +27,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 export default function OperationsPage() {
   const { operations, addOperation, deleteOperation, editOperation, profile, isLoaded } = useTractorData();
@@ -55,7 +56,22 @@ export default function OperationsPage() {
     }
   }, [editingOp]);
 
-  if (!isLoaded) return <div className="p-8 font-headline text-center">Loading operations...</div>;
+  if (!isLoaded) return <div className="p-8 font-headline text-center">Loading...</div>;
+
+  if (!profile.isOnboarded) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+        <AlertCircle className="w-12 h-12 text-destructive" />
+        <h2 className="text-2xl font-bold font-headline">Profile Required</h2>
+        <p className="text-muted-foreground max-w-sm">
+          You must set up your owner profile and tractor details before logging operations.
+        </p>
+        <Button asChild size="lg">
+          <Link href="/settings">Go to Settings</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const filteredOps = operations.filter(op => 
     (op.implement?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
@@ -72,17 +88,11 @@ export default function OperationsPage() {
       autoPickedRate = mappedRate;
     }
     setImplementRate(autoPickedRate);
-    if (!editingOp) {
-      setFarmerRate(autoPickedRate);
-    }
+    if (!editingOp) setFarmerRate(autoPickedRate);
   };
 
   const handleOpenNew = () => {
     setEditingOp(null);
-    setSelectedImplement("");
-    setImplementRate(0);
-    setFarmerRate(0);
-    setAcres(0);
     setIsDialogOpen(true);
   };
 
@@ -102,7 +112,6 @@ export default function OperationsPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
     const data = {
       date: formData.get("date") as string,
       engineHours: parseFloat(formData.get("engineHours") as string) || 0,
@@ -118,13 +127,12 @@ export default function OperationsPage() {
     if (editingOp) {
       editOperation(editingOp.id, data);
       setEditingOp(null);
-      setIsDialogOpen(false);
       toast({ title: "Record updated" });
     } else {
       addOperation(data);
-      setIsDialogOpen(false);
       toast({ title: "Record saved" });
     }
+    setIsDialogOpen(false);
   };
 
   return (
@@ -132,7 +140,7 @@ export default function OperationsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline">Operations Log</h1>
-          <p className="text-muted-foreground">Manage and record daily farm activity.</p>
+          <p className="text-muted-foreground">History of completed farm tasks.</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -148,7 +156,7 @@ export default function OperationsPage() {
               <DialogTitle className="text-2xl font-headline">
                 {editingOp ? "Edit Log Entry" : "Log Daily Operation"}
               </DialogTitle>
-              <DialogDescription>Fill in the details for today's farm work.</DialogDescription>
+              <DialogDescription>Fill in the work details accurately.</DialogDescription>
             </DialogHeader>
             <form key={editingOp?.id || 'new'} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
               <div className="space-y-2">
@@ -169,9 +177,9 @@ export default function OperationsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Implement Rate (Reference - KSh/Acre)</Label>
+                <Label>Implement Rate (Standard)</Label>
                 <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center font-medium italic">
-                  KSh {(implementRate || 0).toLocaleString()}
+                  KSh {(implementRate || 0).toLocaleString()} / Acre
                 </div>
               </div>
               <div className="space-y-2">
@@ -192,7 +200,7 @@ export default function OperationsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Farmer Rate (Job Price) (KSh/Acre)</Label>
+                <Label>Farmer Rate (Job Price)</Label>
                 <Input 
                   type="number" 
                   value={farmerRate || ""} 
@@ -203,19 +211,10 @@ export default function OperationsPage() {
               </div>
               
               <div className="space-y-2">
-                <Label>Total Rental Fee (Standard Cost)</Label>
-                <div className="h-10 px-3 py-2 rounded-md border bg-secondary/50 flex items-center font-bold text-muted-foreground">
-                  KSh {calculatedRentalFee.toLocaleString()}
-                </div>
-                <p className="text-[10px] text-muted-foreground italic">Auto-calculated: Implement Rate × Acres</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-primary">Total Revenue Collected (Actual)</Label>
+                <Label>Total Revenue (Actual Cash)</Label>
                 <div className="h-10 px-3 py-2 rounded-md border border-primary/20 bg-primary/10 flex items-center font-bold text-primary">
                   KSh {calculatedRevenue.toLocaleString()}
                 </div>
-                <p className="text-[10px] text-primary italic">Auto-calculated: Farmer Rate × Acres</p>
               </div>
 
               <div className="space-y-2">
@@ -223,11 +222,11 @@ export default function OperationsPage() {
                 <Input type="number" step="1" id="fuelCost" name="fuelCost" placeholder="0" required defaultValue={editingOp?.fuelCost || ""} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="laborCost">Operator & Booking Payments (KSh)</Label>
+                <Label htmlFor="laborCost">Operator & Booking (KSh)</Label>
                 <Input type="number" step="1" id="laborCost" name="laborCost" placeholder="0" required defaultValue={editingOp?.laborCost || ""} />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="repairCost">Daily Mechanical Costs (KSh)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="repairCost">Mechanical Costs (KSh)</Label>
                 <Input type="number" step="1" id="repairCost" name="repairCost" placeholder="0" defaultValue={editingOp?.repairCost || "0"} />
               </div>
               <div className="md:col-span-2 pt-4">
@@ -243,7 +242,7 @@ export default function OperationsPage() {
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-headline">Operational Record Details</DialogTitle>
+            <DialogTitle className="text-2xl font-headline">Operation Summary</DialogTitle>
           </DialogHeader>
           {viewingOp && (
             <div className="space-y-3 py-4">
@@ -255,44 +254,24 @@ export default function OperationsPage() {
                 <span className="text-muted-foreground font-medium">Implement</span>
                 <span className="font-bold">{viewingOp.implement}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground font-medium">Acres Covered</span>
-                <span className="font-bold">{(viewingOp.acres || 0).toFixed(2)}</span>
-              </div>
               
               <div className="pt-4 pb-2">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Finance Breakdown</h4>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Financials</h4>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Farmer Rate</span>
-                    <span>KSh {(viewingOp.farmerRate || 0).toLocaleString()}/Acre</span>
-                  </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Revenue Collected</span>
                     <span className="font-bold text-primary">KSh {(viewingOp.totalRevenueCollected || 0).toLocaleString()}</span>
                   </div>
                   <Separator className="my-2" />
                   <div className="flex justify-between text-xs italic text-muted-foreground">
-                    <span>Fuel Cost</span>
-                    <span>KSh {(viewingOp.fuelCost || 0).toLocaleString()}</span>
+                    <span>Fuel + Labor + Repairs</span>
+                    <span>KSh {((viewingOp.fuelCost || 0) + (viewingOp.laborCost || 0) + (viewingOp.repairCost || 0)).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-xs italic text-muted-foreground">
-                    <span>Labor (Operator/Agent)</span>
-                    <span>KSh {(viewingOp.laborCost || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs italic text-muted-foreground">
-                    <span>Repair Costs</span>
-                    <span>KSh {(viewingOp.repairCost || 0).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs italic text-muted-foreground">
-                    <span>Rental Fee (Standard)</span>
+                    <span>Standard Rental Fee</span>
                     <span>KSh {(viewingOp.totalRentalFee || 0).toLocaleString()}</span>
                   </div>
                   <Separator className="my-2" />
-                  <div className="flex justify-between font-bold">
-                    <span>Total Expenses</span>
-                    <span className="text-muted-foreground">KSh {(viewingOp.totalExpenses || 0).toLocaleString()}</span>
-                  </div>
                   <div className="flex justify-between font-bold text-lg pt-1">
                     <span>Net Profit</span>
                     <span className={(viewingOp.netProfit || 0) >= 0 ? "text-green-600" : "text-destructive"}>
@@ -306,16 +285,14 @@ export default function OperationsPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search by implement or date..." 
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input 
+          placeholder="Search by implement or date..." 
+          className="pl-10"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       <Card className="border-none shadow-md overflow-hidden">
@@ -326,8 +303,8 @@ export default function OperationsPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Implement</TableHead>
                 <TableHead className="text-right">Acres</TableHead>
-                <TableHead className="text-right">Total Revenue</TableHead>
-                <TableHead className="text-right">Total Expenses</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="text-right">Expenses</TableHead>
                 <TableHead className="text-right">Net Profit</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
@@ -353,7 +330,7 @@ export default function OperationsPage() {
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-destructive"
-                          onClick={() => { if(confirm("Delete?")) deleteOperation(op.id); }}
+                          onClick={() => { if(confirm("Delete record?")) deleteOperation(op.id); }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -364,7 +341,7 @@ export default function OperationsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-muted-foreground italic">
-                    No operations logged yet.
+                    No operations logged.
                   </TableCell>
                 </TableRow>
               )}

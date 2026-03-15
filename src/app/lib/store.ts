@@ -1,17 +1,22 @@
+
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 export type ServiceType = 'Minor' | 'Major' | 'Annual';
 export type TractorModel = 'NEW HOLLAND' | 'CASE IH' | 'JOHN DEERE' | 'OTHER';
 
 export const SERVICE_CYCLE: ServiceType[] = ['Minor', 'Major', 'Minor', 'Annual'];
+export const SERVICE_INTERVAL = 250;
+export const ALERT_THRESHOLD = 50;
 
 export interface UserProfile {
   name: string;
   phone: string;
   tractorModel: TractorModel;
   defaultRepaymentRate: number;
+  isOnboarded: boolean;
 }
 
 export interface Operation {
@@ -23,12 +28,12 @@ export interface Operation {
   repairCost: number;
   implement: string;
   acres: number;
-  farmerRate: number; // Price per acre charged to the farmer
-  implementRate: number; // Standard reference rate for the implement
-  totalRentalFee: number; // Standard value (implementRate * acres)
-  totalRevenueCollected: number; // Actual income (farmerRate * acres)
-  totalExpenses: number; // fuel + labor + repairs + totalRentalFee
-  netProfit: number; // totalRevenueCollected - totalExpenses
+  farmerRate: number;
+  implementRate: number;
+  totalRentalFee: number;
+  totalRevenueCollected: number;
+  totalExpenses: number;
+  netProfit: number;
   profitPerAcre: number;
   fuelCostPerAcre: number;
 }
@@ -61,6 +66,7 @@ const DEFAULT_PROFILE: UserProfile = {
   phone: '',
   tractorModel: 'OTHER',
   defaultRepaymentRate: 2500,
+  isOnboarded: false,
 };
 
 export const IMPLEMENT_RATES: Record<string, number | 'default'> = {
@@ -114,47 +120,45 @@ export function useTractorData() {
     const storedProfile = localStorage.getItem(STORAGE_KEY_PROFILE);
     const storedLoans = localStorage.getItem(STORAGE_KEY_LOANS);
 
-    if (storedOps) {
-      try {
-        setOperations(JSON.parse(storedOps));
-      } catch (e) {
-        console.error("Failed to parse operations data", e);
-      }
-    }
-    
-    if (storedLoans) {
-      try {
-        setLoans(JSON.parse(storedLoans));
-      } catch (e) {
-        console.error("Failed to parse loans data", e);
-      }
-    }
-
-    if (storedService) {
-      try {
-        const parsed = JSON.parse(storedService);
-        setService({ ...DEFAULT_SERVICE_STATE, ...parsed });
-      } catch (e) {
-        console.error("Failed to parse service data", e);
-      }
-    }
-
-    if (storedProfile) {
-      try {
-        const parsed = JSON.parse(storedProfile);
-        setProfile({ ...DEFAULT_PROFILE, ...parsed });
-      } catch (e) {
-        console.error("Failed to parse profile data", e);
-      }
-    }
+    if (storedOps) try { setOperations(JSON.parse(storedOps)); } catch (e) {}
+    if (storedLoans) try { setLoans(JSON.parse(storedLoans)); } catch (e) {}
+    if (storedService) try { setService({ ...DEFAULT_SERVICE_STATE, ...JSON.parse(storedService) }); } catch (e) {}
+    if (storedProfile) try { setProfile({ ...DEFAULT_PROFILE, ...JSON.parse(storedProfile) }); } catch (e) {}
 
     setIsLoaded(true);
   }, []);
 
+  const checkServiceAlert = useCallback(async (currentHours: number, lastService: number) => {
+    const diff = currentHours - lastService;
+    const remaining = SERVICE_INTERVAL - diff;
+
+    if (remaining <= ALERT_THRESHOLD && remaining > 0) {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title: "Tractor Service Due Soon",
+            body: `Your tractor is approaching its 250hr service mark. Only ${remaining.toFixed(1)} hours remaining.`,
+            id: 1,
+            schedule: { at: new Date(Date.now() + 1000) },
+            sound: 'default',
+            attachments: [],
+            actionTypeId: "",
+            extra: null
+          }
+        ]
+      });
+    }
+  }, []);
+
+  const updateService = (newService: ServiceState) => {
+    setService(newService);
+    localStorage.setItem(STORAGE_KEY_SERVICE, JSON.stringify(newService));
+    checkServiceAlert(newService.currentEngineHours, newService.lastServiceHours);
+  };
+
   const saveOperations = (newOps: Operation[]) => {
     setOperations(newOps);
     localStorage.setItem(STORAGE_KEY_OPERATIONS, JSON.stringify(newOps));
-    
     if (newOps.length > 0) {
       const maxHours = Math.max(...newOps.map(o => o.engineHours || 0));
       if (maxHours > (service?.currentEngineHours || 0)) {
@@ -168,14 +172,10 @@ export function useTractorData() {
     localStorage.setItem(STORAGE_KEY_LOANS, JSON.stringify(newLoans));
   };
 
-  const updateService = (newService: ServiceState) => {
-    setService(newService);
-    localStorage.setItem(STORAGE_KEY_SERVICE, JSON.stringify(newService));
-  };
-
   const updateProfile = (newProfile: UserProfile, initialService?: Partial<ServiceState>) => {
-    setProfile(newProfile);
-    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(newProfile));
+    const profileToSave = { ...newProfile, isOnboarded: true };
+    setProfile(profileToSave);
+    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profileToSave));
     
     const serviceUpdate = { 
       ...service, 
@@ -190,9 +190,7 @@ export function useTractorData() {
     const totalRevenueCollected = (op.farmerRate || 0) * (op.acres || 0);
     const totalExpenses = (op.fuelCost || 0) + (op.laborCost || 0) + (op.repairCost || 0) + totalRentalFee;
     const netProfit = totalRevenueCollected - totalExpenses;
-    const profitPerAcre = op.acres > 0 ? netProfit / op.acres : 0;
-    const fuelCostPerAcre = op.acres > 0 ? (op.fuelCost || 0) / op.acres : 0;
-
+    
     const fullOp: Operation = {
       ...op,
       id: crypto.randomUUID(),
@@ -200,51 +198,36 @@ export function useTractorData() {
       totalRevenueCollected,
       totalExpenses,
       netProfit,
-      profitPerAcre,
-      fuelCostPerAcre,
+      profitPerAcre: op.acres > 0 ? netProfit / op.acres : 0,
+      fuelCostPerAcre: op.acres > 0 ? (op.fuelCost || 0) / op.acres : 0,
     };
 
-    const newOps = [fullOp, ...operations];
-    saveOperations(newOps);
+    saveOperations([fullOp, ...operations]);
   };
 
   const addLoanPayment = (payment: Omit<LoanPayment, 'id'>) => {
-    const fullPayment: LoanPayment = {
-      ...payment,
-      id: crypto.randomUUID(),
-    };
-    const newLoans = [fullPayment, ...loans];
-    saveLoans(newLoans);
+    saveLoans([{ ...payment, id: crypto.randomUUID() }, ...loans]);
   };
 
-  const deleteOperation = (id: string) => {
-    const newOps = operations.filter(o => o.id !== id);
-    saveOperations(newOps);
-  };
-
-  const deleteLoanPayment = (id: string) => {
-    const newLoans = loans.filter(l => l.id !== id);
-    saveLoans(newLoans);
-  };
+  const deleteOperation = (id: string) => saveOperations(operations.filter(o => o.id !== id));
+  const deleteLoanPayment = (id: string) => saveLoans(loans.filter(l => l.id !== id));
 
   const editOperation = (id: string, updated: Partial<Operation>) => {
     const newOps = operations.map(o => {
       if (o.id === id) {
-        const merged = { ...o, ...updated };
-        const totalRentalFee = (merged.implementRate || 0) * (merged.acres || 0);
-        const totalRevenueCollected = (merged.farmerRate || 0) * (merged.acres || 0);
-        const totalExpenses = (merged.fuelCost || 0) + (merged.laborCost || 0) + (merged.repairCost || 0) + totalRentalFee;
-        const netProfit = totalRevenueCollected - totalExpenses;
-        const profitPerAcre = merged.acres > 0 ? netProfit / merged.acres : 0;
-        const fuelCostPerAcre = merged.acres > 0 ? (merged.fuelCost || 0) / merged.acres : 0;
+        const m = { ...o, ...updated };
+        const rental = (m.implementRate || 0) * (m.acres || 0);
+        const revenue = (m.farmerRate || 0) * (m.acres || 0);
+        const exp = (m.fuelCost || 0) + (m.laborCost || 0) + (m.repairCost || 0) + rental;
+        const net = revenue - exp;
         return {
-          ...merged,
-          totalRentalFee,
-          totalRevenueCollected,
-          totalExpenses,
-          netProfit,
-          profitPerAcre,
-          fuelCostPerAcre
+          ...m,
+          totalRentalFee: rental,
+          totalRevenueCollected: revenue,
+          totalExpenses: exp,
+          netProfit: net,
+          profitPerAcre: m.acres > 0 ? net / m.acres : 0,
+          fuelCostPerAcre: m.acres > 0 ? (m.fuelCost || 0) / m.acres : 0
         };
       }
       return o;
@@ -253,13 +236,7 @@ export function useTractorData() {
   };
 
   const editLoanPayment = (id: string, updated: Partial<LoanPayment>) => {
-    const newLoans = loans.map(l => {
-      if (l.id === id) {
-        return { ...l, ...updated };
-      }
-      return l;
-    });
-    saveLoans(newLoans);
+    saveLoans(loans.map(l => l.id === id ? { ...l, ...updated } : l));
   };
 
   return {

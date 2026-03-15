@@ -106,10 +106,6 @@ export default function LoansPage() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" onClick={handleExport} className="h-14 rounded-full px-6">
-            <Download className="w-5 h-5 mr-2" />
-            Export CSV
-          </Button>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) setEditingLoan(null);
@@ -183,14 +179,20 @@ export default function LoansPage() {
         </div>
       </Card>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input 
-          placeholder="Search by M-Pesa code or date..." 
-          className="pl-10"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      <div className="flex flex-col sm:flex-row gap-4 items-end sm:items-center justify-between bg-card p-4 rounded-lg shadow-sm">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search by M-Pesa code or date..." 
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Button variant="outline" onClick={handleExport} className="h-10 rounded-md px-6 shrink-0 w-full sm:w-auto">
+          <Download className="w-4 h-4 mr-2" />
+          Export {searchQuery ? "Filtered" : "All"} CSV
+        </Button>
       </div>
 
       <Card className="border-none shadow-md overflow-hidden">

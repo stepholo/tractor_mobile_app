@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Trash2, Smartphone, Bell, ShieldCheck, UserCircle, FileSpreadsheet, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import { useState, useEffect } from "react";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { exportToCsv } from "@/app/lib/export";
@@ -19,7 +20,7 @@ export default function SettingsPage() {
   const [phone, setPhone] = useState("");
   const [model, setModel] = useState<TractorModel>("OTHER");
   const [repaymentRate, setRepaymentRate] = useState("2500");
-  
+
   // Service-related states for profile update
   const [lastServiceType, setLastServiceType] = useState<ServiceType>("Annual");
   const [lastServiceHours, setLastServiceHours] = useState("");
@@ -39,13 +40,13 @@ export default function SettingsPage() {
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const lIdx = SERVICE_CYCLE.indexOf(lastServiceType);
-    
-    updateProfile({ 
-      name, 
-      phone, 
-      tractorModel: model, 
+
+    updateProfile({
+      name,
+      phone,
+      tractorModel: model,
       defaultRepaymentRate: parseFloat(repaymentRate) || 2500,
       isOnboarded: true
     }, {
@@ -53,60 +54,53 @@ export default function SettingsPage() {
       lastServiceType: lastServiceType,
       lastServiceIndex: lIdx === -1 ? 3 : lIdx
     });
-    
+
     toast({ title: "Profile Updated", description: "Your details and service history have been saved." });
   };
 
-  const requestNotifications = async () => {
-    const status = await LocalNotifications.requestPermissions();
-    if (status.display === 'granted') {
-      toast({ title: "Notifications Enabled", description: "You will receive service alerts." });
-    }
-  };
-
-  const handleFullExport = async () => {
-    if (operations.length === 0 && loans.length === 0) {
+  const exportToExcel = async () => {
+    if (operations.length === 0) {
       toast({ title: "No data to export", variant: "destructive" });
       return;
     }
 
     const headers = [
-      "Category", 
-      "Date", 
-      "Description", 
-      "Acres/Units", 
-      "Rate (KSh)", 
-      "Total Revenue (KSh)", 
-      "Total Expenses (KSh)", 
-      "Net Profit (KSh)", 
+      "Category",
+      "Date",
+      "Description",
+      "Acres/Units",
+      "Rate (KSh)",
+      "Total Revenue (KSh)",
+      "Total Expenses (KSh)",
+      "Net Profit (KSh)",
       "Reference (Hrs/M-Pesa)"
     ];
-    
+
     const opRows = operations.map(op => [
-      "Operation Log", 
-      op.date, 
-      op.implement || "Field Work", 
+      "Operation Log",
+      op.date,
+      op.implement || "Field Work",
       (op.acres || 0).toFixed(2),
-      op.farmerRate, 
-      op.totalRevenueCollected, 
-      op.totalExpenses, 
-      op.netProfit, 
+      op.farmerRate,
+      op.totalRevenueCollected,
+      op.totalExpenses,
+      op.netProfit,
       op.engineHours
     ]);
 
     const loanRows = loans.map(l => [
-      "Loan Payment", 
-      l.date, 
-      "Tractor Loan Repayment", 
-      "1", 
-      l.amount, 
-      "0", 
-      "0", 
-      `-${l.amount}`, 
+      "Loan Payment",
+      l.date,
+      "Tractor Loan Repayment",
+      "1",
+      l.amount,
+      "0",
+      "0",
+      `-${l.amount}`,
       l.mpesaCode
     ]);
 
-    const combinedRows = [...opRows, ...loanRows].sort((a, b) => 
+    const combinedRows = [...opRows, ...loanRows].sort((a, b) =>
       new Date(b[1] as string).getTime() - new Date(a[1] as string).getTime()
     );
 
@@ -119,12 +113,12 @@ export default function SettingsPage() {
     ];
 
     await exportToCsv(
-      `tractor_pro_master_backup_${new Date().toISOString().split('T')[0]}.csv`, 
-      headers, 
-      combinedRows, 
+      `tractor_pro_master_backup_${new Date().toISOString().split('T')[0]}.csv`,
+      headers,
+      combinedRows,
       meta
     );
-    
+
     toast({ title: "Master Export Complete" });
   };
 
@@ -204,12 +198,12 @@ export default function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastServiceHours">Hours @ Last Service</Label>
-                    <Input 
-                      id="lastServiceHours" 
-                      type="number" 
-                      step="0.1" 
-                      placeholder="0.0" 
-                      value={lastServiceHours} 
+                    <Input
+                      id="lastServiceHours"
+                      type="number"
+                      step="0.1"
+                      placeholder="0.0"
+                      value={lastServiceHours}
                       onChange={(e) => setLastServiceHours(e.target.value)}
                     />
                   </div>

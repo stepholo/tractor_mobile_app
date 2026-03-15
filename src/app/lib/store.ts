@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 export type ServiceType = 'Minor' | 'Major' | 'Annual';
-export type TractorModel = 'NEW HOLLAND' | 'CASE IH' | 'JOHN DEERE' | 'OTHER';
+export type TractorModel = 'NEW HOLLAND' | 'CASE IH' | 'JOHN DEERE' | 'ZETOR' | 'OTHER';
 
 export const SERVICE_CYCLE: ServiceType[] = ['Minor', 'Major', 'Minor', 'Annual'];
 export const SERVICE_INTERVAL = 250;
@@ -84,12 +84,15 @@ export const IMPLEMENT_RATES: Record<string, number | 'default'> = {
   'Other': 0
 };
 
+const NEW_HOLLAND_ZETOR_KITS = {
+  'Minor': ['Air Filter (Outer)', 'Engine Oil Filter', '2 Fuel Filters', '10L Engine Oil 15W40'],
+  'Major': ['Air Filter (Inner & Outer)', 'Engine Oil Filter', '2 Fuel Filters', 'Hydraulic Filter', '10L Engine Oil 15W40'],
+  'Annual': ['Air Filter (Inner & Outer)', 'Engine Oil Filter', '2 Fuel Filters', 'Hydraulic Filter', '10L Engine Oil 15W40', 'Hydraulic Oil 40L 10W30', 'Front Gear Oil 85W90 10L', 'Rear Gear Oil 85W140 20L']
+};
+
 export const SERVICE_KITS: Record<Exclude<TractorModel, 'OTHER'>, Record<ServiceType, string[]>> = {
-  'NEW HOLLAND': {
-    'Minor': ['Air Filter (Outer)', 'Engine Oil Filter', '2 Fuel Filters', '10L Engine Oil 15W40'],
-    'Major': ['Air Filter (Inner & Outer)', 'Engine Oil Filter', '2 Fuel Filters', 'Hydraulic Filter', '10L Engine Oil 15W40'],
-    'Annual': ['Air Filter (Inner & Outer)', 'Engine Oil Filter', '2 Fuel Filters', 'Hydraulic Filter', '10L Engine Oil 15W40', 'Hydraulic Oil 40L 10W30', 'Front Gear Oil 85W90 10L', 'Rear Gear Oil 85W140 20L']
-  },
+  'NEW HOLLAND': NEW_HOLLAND_ZETOR_KITS,
+  'ZETOR': NEW_HOLLAND_ZETOR_KITS,
   'CASE IH': {
     'Minor': ['Air Filter (Outer)', 'Engine Oil Filter', '2 Fuel Filters', '10L Engine Oil 15W40'],
     'Major': ['Air Filter (Inner & Outer)', 'Engine Oil Filter', '2 Fuel Filters', 'Hydraulic Filter', '10L Engine Oil 15W40'],

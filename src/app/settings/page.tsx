@@ -120,6 +120,7 @@ export default function SettingsPage() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="NEW HOLLAND">New Holland</SelectItem>
+                      <SelectItem value="ZETOR">Zetor</SelectItem>
                       <SelectItem value="CASE IH">Case IH</SelectItem>
                       <SelectItem value="JOHN DEERE">John Deere</SelectItem>
                       <SelectItem value="OTHER">Other / Custom</SelectItem>

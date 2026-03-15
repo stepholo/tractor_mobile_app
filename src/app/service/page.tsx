@@ -28,7 +28,6 @@ export default function ServicePage() {
 
   if (!isLoaded) return <div className="p-8 text-center font-headline">Loading service data...</div>;
 
-  // Defensive values for calculation to prevent errors with legacy data
   const currentHours = service?.currentEngineHours || 0;
   const lastHours = service?.lastServiceHours || 0;
   const lastIndex = typeof service?.lastServiceIndex === 'number' ? service.lastServiceIndex : 3;
@@ -40,7 +39,6 @@ export default function ServicePage() {
   const isServiceDue = hoursSinceLast >= SERVICE_INTERVAL;
   const isServiceWarning = hoursSinceLast >= (SERVICE_INTERVAL - ALERT_THRESHOLD);
 
-  // Cycle: Minor -> Major -> Minor -> Annual
   const nextIdx = (lastIndex + 1) % 4;
   const nextType = SERVICE_CYCLE[nextIdx] || 'Minor';
 
@@ -72,7 +70,6 @@ export default function ServicePage() {
     toast({ title: "Tractor Configured", description: `Model set to ${model}` });
   };
 
-  // Safely check if tractorModel is one of the keys in SERVICE_KITS
   const kits = (tractorModel !== 'OTHER' && SERVICE_KITS[tractorModel as Exclude<TractorModel, 'OTHER'>]) 
     ? SERVICE_KITS[tractorModel as Exclude<TractorModel, 'OTHER'>][nextType] 
     : null;
@@ -105,6 +102,7 @@ export default function ServicePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="NEW HOLLAND">New Holland</SelectItem>
+                    <SelectItem value="ZETOR">Zetor</SelectItem>
                     <SelectItem value="CASE IH">Case IH</SelectItem>
                     <SelectItem value="JOHN DEERE">John Deere</SelectItem>
                     <SelectItem value="OTHER">Other / Custom</SelectItem>

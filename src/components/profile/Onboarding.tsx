@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -143,15 +144,15 @@ export function Onboarding() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Last Service Type</Label>
+                <Label>Last Service Done</Label>
                 <Select value={lastServiceType} onValueChange={(v) => setLastServiceType(v as ServiceType)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Minor">Minor</SelectItem>
-                    <SelectItem value="Major">Major</SelectItem>
-                    <SelectItem value="Annual">Annual</SelectItem>
+                    <SelectItem value="Minor">Minor Service</SelectItem>
+                    <SelectItem value="Major">Major Service</SelectItem>
+                    <SelectItem value="Annual">Annual Service</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -14,7 +14,7 @@ import {
   DialogTrigger,
   DialogDescription
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Search, Wallet, Edit2, Info } from "lucide-react";
+import { Plus, Trash2, Search, Wallet, Edit2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { 
   Table, 
@@ -26,9 +26,10 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { exportToCsv } from "@/app/lib/export";
 
 export default function LoansPage() {
-  const { loans, addLoanPayment, deleteLoanPayment, editLoanPayment, isLoaded } = useTractorData();
+  const { loans, addLoanPayment, deleteLoanPayment, editLoanPayment, profile, isLoaded } = useTractorData();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,6 +44,26 @@ export default function LoansPage() {
   );
 
   const totalLoanPaid = loans.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+
+  const handleExport = async () => {
+    if (filteredLoans.length === 0) {
+      toast({ title: "No data to export", variant: "destructive" });
+      return;
+    }
+
+    const headers = ["Date of payment", "Amount (KSh)", "M-Pesa Code"];
+    const rows = filteredLoans.map(l => [l.date, l.amount, l.mpesaCode]);
+    const meta = [
+      ["Owner Name", profile.name],
+      ["Phone", profile.phone],
+      ["Tractor Model", profile.tractorModel],
+      ["Export Type", searchQuery ? "Filtered Loan Payments" : "All Loan Payments"],
+      ["Export Date", new Date().toLocaleString()]
+    ];
+
+    await exportToCsv(`loans_${new Date().toISOString().split('T')[0]}.csv`, headers, rows, meta);
+    toast({ title: "Export Complete" });
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -84,42 +105,48 @@ export default function LoansPage() {
           <p className="text-muted-foreground">Track payments for your tractor loan.</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingLoan(null);
-        }}>
-          <DialogTrigger asChild>
-            <Button size="lg" className="rounded-full shadow-lg h-14 w-full md:w-auto px-8" onClick={() => setEditingLoan(null)}>
-              <Plus className="w-5 h-5 mr-2" />
-              New Payment
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-headline">
-                {editingLoan ? "Edit Payment" : "Record Payment"}
-              </DialogTitle>
-              <DialogDescription>Enter payment details as they appear on your M-Pesa receipt.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Date of payment</Label>
-                <Input type="date" id="date" name="date" required defaultValue={editingLoan?.date || new Date().toISOString().split('T')[0]} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount Paid (KSh)</Label>
-                <Input type="number" step="1" id="amount" name="amount" placeholder="0" required defaultValue={editingLoan?.amount || ""} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mpesaCode">M-Pesa Code</Label>
-                <Input id="mpesaCode" name="mpesaCode" placeholder="ABC123XYZ" required className="uppercase" defaultValue={editingLoan?.mpesaCode || ""} />
-              </div>
-              <Button type="submit" className="w-full py-6 text-lg">
-                {editingLoan ? "Update Payment" : "Save Payment"}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" onClick={handleExport} className="h-14 rounded-full px-6">
+            <Download className="w-5 h-5 mr-2" />
+            Export CSV
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setEditingLoan(null);
+          }}>
+            <DialogTrigger asChild>
+              <Button size="lg" className="rounded-full shadow-lg h-14 w-full md:w-auto px-8" onClick={() => setEditingLoan(null)}>
+                <Plus className="w-5 h-5 mr-2" />
+                New Payment
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-headline">
+                  {editingLoan ? "Edit Payment" : "Record Payment"}
+                </DialogTitle>
+                <DialogDescription>Enter payment details as they appear on your M-Pesa receipt.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date of payment</Label>
+                  <Input type="date" id="date" name="date" required defaultValue={editingLoan?.date || new Date().toISOString().split('T')[0]} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount Paid (KSh)</Label>
+                  <Input type="number" step="1" id="amount" name="amount" placeholder="0" required defaultValue={editingLoan?.amount || ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mpesaCode">M-Pesa Code</Label>
+                  <Input id="mpesaCode" name="mpesaCode" placeholder="ABC123XYZ" required className="uppercase" defaultValue={editingLoan?.mpesaCode || ""} />
+                </div>
+                <Button type="submit" className="w-full py-6 text-lg">
+                  {editingLoan ? "Update Payment" : "Save Payment"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>

@@ -7,11 +7,11 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Trash2, Database, ShieldCheck, UserCircle, Bell, Smartphone } from "lucide-react";
+import { Download, Trash2, Smartphone, Bell, ShieldCheck, UserCircle, FileSpreadsheet } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { LocalNotifications } from "@capacitor/local-notifications";
-import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { exportToCsv } from "@/app/lib/export";
 
 export default function SettingsPage() {
   const { operations, profile, updateProfile, isLoaded } = useTractorData();
@@ -48,8 +48,8 @@ export default function SettingsPage() {
     }
   };
 
-  const exportData = async (type: 'all' | 'filtered', dataToExport = operations) => {
-    if (dataToExport.length === 0) {
+  const handleFullExport = async () => {
+    if (operations.length === 0) {
       toast({ title: "No data to export", variant: "destructive" });
       return;
     }
@@ -60,52 +60,22 @@ export default function SettingsPage() {
       "Fuel Cost (KSh)", "Labor Cost (KSh)", "Repair Cost (KSh)", "Net Profit (KSh)"
     ];
     
-    const rows = dataToExport.map(op => [
+    const rows = operations.map(op => [
       op.date, op.implement, op.engineHours, (op.acres || 0).toFixed(2),
       op.farmerRate, op.totalRevenueCollected, op.totalRentalFee,
       op.fuelCost, op.laborCost, op.repairCost, op.netProfit
     ]);
 
-    const metaInfo = [
+    const meta = [
       ["Owner Name", profile.name],
       ["Phone", profile.phone],
       ["Tractor Model", profile.tractorModel],
-      ["Export Type", type],
-      ["Export Date", new Date().toLocaleString()],
-      []
+      ["Export Type", "Full Backup (All Data)"],
+      ["Export Date", new Date().toLocaleString()]
     ];
 
-    const csvContent = [
-      ...metaInfo.map(e => e.join(",")),
-      headers.join(","),
-      ...rows.map(e => e.join(","))
-    ].join("\n");
-
-    try {
-      // For web/standard browser
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `tractor_${type}_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Attempt Capacitor Filesystem save if possible
-      try {
-        await Filesystem.writeFile({
-          path: `tractor_ledger_${Date.now()}.csv`,
-          data: csvContent,
-          directory: Directory.Documents,
-          encoding: Encoding.UTF8,
-        });
-      } catch(e) {}
-
-      toast({ title: "Export Complete", description: `Data saved to your device.` });
-    } catch (e) {
-      toast({ title: "Export Failed", variant: "destructive" });
-    }
+    await exportToCsv(`tractor_full_backup_${new Date().toISOString().split('T')[0]}.csv`, headers, rows, meta);
+    toast({ title: "Export Complete" });
   };
 
   const resetAllData = () => {
@@ -199,21 +169,17 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Download className="w-5 h-5" />
-              Data Export
+              Master Data Export
             </CardTitle>
-            <CardDescription className="text-gray-400">Download your logs to device storage.</CardDescription>
+            <CardDescription className="text-gray-400">Export all operations to CSV. For filtered exports, use the buttons on the Operations or Loans pages.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="text-white border-white/20" onClick={() => exportData('all')}>
-                All Data
-              </Button>
-              <Button variant="outline" className="text-white border-white/20" onClick={() => exportData('filtered')}>
-                Filtered Only
-              </Button>
-            </div>
+            <Button variant="outline" className="w-full text-white border-white/20 h-12" onClick={handleFullExport}>
+              <FileSpreadsheet className="w-5 h-5 mr-2" />
+              Download Full History
+            </Button>
             <p className="text-[10px] text-center text-gray-500 italic">
-              Downloads go to your phone's "Documents" or "Downloads" folder.
+              Downloads go to your phone's "Documents" folder.
             </p>
           </CardContent>
         </Card>

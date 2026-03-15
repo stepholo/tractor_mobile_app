@@ -13,7 +13,7 @@ import {
   DialogTitle, 
   DialogDescription
 } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit2, Search, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit2, Search, AlertCircle, Download } from "lucide-react";
 import { format } from "date-fns";
 import { 
   Table, 
@@ -28,6 +28,7 @@ import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { exportToCsv } from "@/app/lib/export";
 
 export default function OperationsPage() {
   const { operations, addOperation, deleteOperation, editOperation, profile, isLoaded } = useTractorData();
@@ -106,7 +107,36 @@ export default function OperationsPage() {
     setIsViewOpen(true);
   };
 
-  const calculatedRentalFee = (implementRate || 0) * (acres || 0);
+  const handleExport = async () => {
+    if (filteredOps.length === 0) {
+      toast({ title: "No data to export", variant: "destructive" });
+      return;
+    }
+
+    const headers = [
+      "Date", "Implement", "Current Engine Hours", "Acres", 
+      "Farmer Rate (KSh)", "Revenue Collected (KSh)", "Rental Fee (KSh)",
+      "Fuel Cost (KSh)", "Labor Cost (KSh)", "Repair Cost (KSh)", "Net Profit (KSh)"
+    ];
+    
+    const rows = filteredOps.map(op => [
+      op.date, op.implement, op.engineHours, (op.acres || 0).toFixed(2),
+      op.farmerRate, op.totalRevenueCollected, op.totalRentalFee,
+      op.fuelCost, op.laborCost, op.repairCost, op.netProfit
+    ]);
+
+    const meta = [
+      ["Owner Name", profile.name],
+      ["Phone", profile.phone],
+      ["Tractor Model", profile.tractorModel],
+      ["Export Type", searchQuery ? "Filtered Operations" : "All Operations"],
+      ["Export Date", new Date().toLocaleString()]
+    ];
+
+    await exportToCsv(`operations_${new Date().toISOString().split('T')[0]}.csv`, headers, rows, meta);
+    toast({ title: "Export Complete" });
+  };
+
   const calculatedRevenue = (farmerRate || 0) * (acres || 0);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -143,100 +173,106 @@ export default function OperationsPage() {
           <p className="text-muted-foreground">History of completed farm tasks.</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setEditingOp(null);
-        }}>
-          <Button onClick={handleOpenNew} size="lg" className="rounded-full shadow-lg h-14 w-full md:w-auto px-8">
-            <Plus className="w-5 h-5 mr-2" />
-            New Log Entry
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" onClick={handleExport} className="h-14 rounded-full px-6">
+            <Download className="w-5 h-5 mr-2" />
+            Export CSV
           </Button>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-headline">
-                {editingOp ? "Edit Log Entry" : "Log Daily Operation"}
-              </DialogTitle>
-              <DialogDescription>Fill in the work details accurately.</DialogDescription>
-            </DialogHeader>
-            <form key={editingOp?.id || 'new'} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
-                <Input type="date" id="date" name="date" required defaultValue={editingOp?.date || new Date().toISOString().split('T')[0]} />
-              </div>
-              <div className="space-y-2">
-                <Label>Implement Used</Label>
-                <Select value={selectedImplement} onValueChange={handleImplementChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select implement" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(IMPLEMENT_RATES).map(impl => (
-                      <SelectItem key={impl} value={impl}>{impl}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Implement Rate (Standard)</Label>
-                <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center font-medium italic">
-                  KSh {(implementRate || 0).toLocaleString()} / Acre
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setEditingOp(null);
+          }}>
+            <Button onClick={handleOpenNew} size="lg" className="rounded-full shadow-lg h-14 w-full md:w-auto px-8">
+              <Plus className="w-5 h-5 mr-2" />
+              New Log Entry
+            </Button>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-headline">
+                  {editingOp ? "Edit Log Entry" : "Log Daily Operation"}
+                </DialogTitle>
+                <DialogDescription>Fill in the work details accurately.</DialogDescription>
+              </DialogHeader>
+              <form key={editingOp?.id || 'new'} onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input type="date" id="date" name="date" required defaultValue={editingOp?.date || new Date().toISOString().split('T')[0]} />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="engineHours">Current Engine Hours</Label>
-                <Input type="number" step="0.1" id="engineHours" name="engineHours" placeholder="0.0" required defaultValue={editingOp?.engineHours || ""} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="acres">Acres Completed</Label>
-                <Input 
-                  type="number" 
-                  step="0.01" 
-                  id="acres" 
-                  name="acres" 
-                  placeholder="0.00" 
-                  required 
-                  value={acres || ""} 
-                  onChange={(e) => setAcres(parseFloat(e.target.value) || 0)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Farmer Rate (Job Price)</Label>
-                <Input 
-                  type="number" 
-                  value={farmerRate || ""} 
-                  onChange={(e) => setFarmerRate(parseFloat(e.target.value) || 0)} 
-                  placeholder="0" 
-                  required 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Total Revenue (Actual Cash)</Label>
-                <div className="h-10 px-3 py-2 rounded-md border border-primary/20 bg-primary/10 flex items-center font-bold text-primary">
-                  KSh {calculatedRevenue.toLocaleString()}
+                <div className="space-y-2">
+                  <Label>Implement Used</Label>
+                  <Select value={selectedImplement} onValueChange={handleImplementChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select implement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(IMPLEMENT_RATES).map(impl => (
+                        <SelectItem key={impl} value={impl}>{impl}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
+                <div className="space-y-2">
+                  <Label>Implement Rate (Standard)</Label>
+                  <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center font-medium italic">
+                    KSh {(implementRate || 0).toLocaleString()} / Acre
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="engineHours">Current Engine Hours</Label>
+                  <Input type="number" step="0.1" id="engineHours" name="engineHours" placeholder="0.0" required defaultValue={editingOp?.engineHours || ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="acres">Acres Completed</Label>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    id="acres" 
+                    name="acres" 
+                    placeholder="0.00" 
+                    required 
+                    value={acres || ""} 
+                    onChange={(e) => setAcres(parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Farmer Rate (Job Price)</Label>
+                  <Input 
+                    type="number" 
+                    value={farmerRate || ""} 
+                    onChange={(e) => setFarmerRate(parseFloat(e.target.value) || 0)} 
+                    placeholder="0" 
+                    required 
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Total Revenue (Actual Cash)</Label>
+                  <div className="h-10 px-3 py-2 rounded-md border border-primary/20 bg-primary/10 flex items-center font-bold text-primary">
+                    KSh {calculatedRevenue.toLocaleString()}
+                  </div>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fuelCost">Fuel Cost (KSh)</Label>
-                <Input type="number" step="1" id="fuelCost" name="fuelCost" placeholder="0" required defaultValue={editingOp?.fuelCost || ""} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="laborCost">Operator & Booking (KSh)</Label>
-                <Input type="number" step="1" id="laborCost" name="laborCost" placeholder="0" required defaultValue={editingOp?.laborCost || ""} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="repairCost">Mechanical Costs (KSh)</Label>
-                <Input type="number" step="1" id="repairCost" name="repairCost" placeholder="0" defaultValue={editingOp?.repairCost || "0"} />
-              </div>
-              <div className="md:col-span-2 pt-4">
-                <Button type="submit" className="w-full py-6 text-lg">
-                  {editingOp ? "Update Record" : "Save Record"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="space-y-2">
+                  <Label htmlFor="fuelCost">Fuel Cost (KSh)</Label>
+                  <Input type="number" step="1" id="fuelCost" name="fuelCost" placeholder="0" required defaultValue={editingOp?.fuelCost || ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="laborCost">Operator & Booking (KSh)</Label>
+                  <Input type="number" step="1" id="laborCost" name="laborCost" placeholder="0" required defaultValue={editingOp?.laborCost || ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="repairCost">Mechanical Costs (KSh)</Label>
+                  <Input type="number" step="1" id="repairCost" name="repairCost" placeholder="0" defaultValue={editingOp?.repairCost || "0"} />
+                </div>
+                <div className="md:col-span-2 pt-4">
+                  <Button type="submit" className="w-full py-6 text-lg">
+                    {editingOp ? "Update Record" : "Save Record"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>

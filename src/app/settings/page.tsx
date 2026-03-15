@@ -14,7 +14,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { exportToCsv } from "@/app/lib/export";
 
 export default function SettingsPage() {
-  const { operations, profile, updateProfile, isLoaded } = useTractorData();
+  const { operations, loans, profile, updateProfile, isLoaded } = useTractorData();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [model, setModel] = useState<TractorModel>("OTHER");
@@ -49,33 +49,69 @@ export default function SettingsPage() {
   };
 
   const handleFullExport = async () => {
-    if (operations.length === 0) {
+    if (operations.length === 0 && loans.length === 0) {
       toast({ title: "No data to export", variant: "destructive" });
       return;
     }
 
+    // Unified format for Master Export
     const headers = [
-      "Date", "Implement", "Current Engine Hours", "Acres", 
-      "Farmer Rate (KSh)", "Revenue Collected (KSh)", "Rental Fee (KSh)",
-      "Fuel Cost (KSh)", "Labor Cost (KSh)", "Repair Cost (KSh)", "Net Profit (KSh)"
+      "Category", 
+      "Date", 
+      "Description", 
+      "Acres/Units", 
+      "Rate (KSh)", 
+      "Total Revenue (KSh)", 
+      "Total Expenses (KSh)", 
+      "Net Profit (KSh)", 
+      "Reference (Hrs/M-Pesa)"
     ];
     
-    const rows = operations.map(op => [
-      op.date, op.implement, op.engineHours, (op.acres || 0).toFixed(2),
-      op.farmerRate, op.totalRevenueCollected, op.totalRentalFee,
-      op.fuelCost, op.laborCost, op.repairCost, op.netProfit
+    const opRows = operations.map(op => [
+      "Operation Log", 
+      op.date, 
+      op.implement || "Field Work", 
+      (op.acres || 0).toFixed(2),
+      op.farmerRate, 
+      op.totalRevenueCollected, 
+      op.totalExpenses, 
+      op.netProfit, 
+      op.engineHours
     ]);
+
+    const loanRows = loans.map(l => [
+      "Loan Payment", 
+      l.date, 
+      "Tractor Loan Repayment", 
+      "1", 
+      l.amount, 
+      "0", // Loans aren't "revenue"
+      "0", 
+      `-${l.amount}`, // Represent as outflow in profit context
+      l.mpesaCode
+    ]);
+
+    // Combine and sort by date descending
+    const combinedRows = [...opRows, ...loanRows].sort((a, b) => 
+      new Date(b[1] as string).getTime() - new Date(a[1] as string).getTime()
+    );
 
     const meta = [
       ["Owner Name", profile.name],
       ["Phone", profile.phone],
       ["Tractor Model", profile.tractorModel],
-      ["Export Type", "Full Backup (All Data)"],
+      ["Export Type", "Full Master Backup (Ops + Loans)"],
       ["Export Date", new Date().toLocaleString()]
     ];
 
-    await exportToCsv(`tractor_full_backup_${new Date().toISOString().split('T')[0]}.csv`, headers, rows, meta);
-    toast({ title: "Export Complete" });
+    await exportToCsv(
+      `tractor_pro_master_backup_${new Date().toISOString().split('T')[0]}.csv`, 
+      headers, 
+      combinedRows, 
+      meta
+    );
+    
+    toast({ title: "Master Export Complete" });
   };
 
   const resetAllData = () => {
@@ -128,7 +164,7 @@ export default function SettingsPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="reRate">Default Rate</Label>
+                  <Label htmlFor="reRate">Default Rate (KSh/Ac)</Label>
                   <Input id="reRate" type="number" value={repaymentRate} onChange={(e) => setRepaymentRate(e.target.value)} />
                 </div>
               </div>
@@ -172,7 +208,7 @@ export default function SettingsPage() {
               <Download className="w-5 h-5" />
               Master Data Export
             </CardTitle>
-            <CardDescription className="text-gray-400">Export all operations to CSV. For filtered exports, use the buttons on the Operations or Loans pages.</CardDescription>
+            <CardDescription className="text-gray-400">Export all operations AND loan payments to a single CSV file for full backup.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button variant="outline" className="w-full text-white border-white/20 h-12" onClick={handleFullExport}>
@@ -180,7 +216,7 @@ export default function SettingsPage() {
               Download Full History
             </Button>
             <p className="text-[10px] text-center text-gray-500 italic">
-              Downloads go to your phone's "Documents" folder.
+              Contains unified logs of all field work and financial payments.
             </p>
           </CardContent>
         </Card>

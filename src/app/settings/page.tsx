@@ -1,24 +1,28 @@
 
 "use client";
 
-import { useTractorData, TractorModel } from "@/app/lib/store";
+import { useTractorData, TractorModel, ServiceType, SERVICE_CYCLE } from "@/app/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Trash2, Smartphone, Bell, ShieldCheck, UserCircle, FileSpreadsheet } from "lucide-react";
+import { Download, Trash2, Smartphone, Bell, ShieldCheck, UserCircle, FileSpreadsheet, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { exportToCsv } from "@/app/lib/export";
 
 export default function SettingsPage() {
-  const { operations, loans, profile, updateProfile, isLoaded } = useTractorData();
+  const { operations, loans, profile, service, updateProfile, isLoaded } = useTractorData();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [model, setModel] = useState<TractorModel>("OTHER");
   const [repaymentRate, setRepaymentRate] = useState("2500");
+  
+  // Service-related states for profile update
+  const [lastServiceType, setLastServiceType] = useState<ServiceType>("Annual");
+  const [lastServiceHours, setLastServiceHours] = useState("");
 
   useEffect(() => {
     if (isLoaded && profile) {
@@ -27,18 +31,30 @@ export default function SettingsPage() {
       setModel(profile.tractorModel || "OTHER");
       setRepaymentRate(profile.defaultRepaymentRate?.toString() || "2500");
     }
-  }, [isLoaded, profile]);
+    if (isLoaded && service) {
+      setLastServiceType(service.lastServiceType || "Annual");
+      setLastServiceHours(service.lastServiceHours?.toString() || "0");
+    }
+  }, [isLoaded, profile, service]);
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const lIdx = SERVICE_CYCLE.indexOf(lastServiceType);
+    
     updateProfile({ 
       name, 
       phone, 
       tractorModel: model, 
       defaultRepaymentRate: parseFloat(repaymentRate) || 2500,
       isOnboarded: true
+    }, {
+      lastServiceHours: parseFloat(lastServiceHours) || 0,
+      lastServiceType: lastServiceType,
+      lastServiceIndex: lIdx === -1 ? 3 : lIdx
     });
-    toast({ title: "Profile Updated", description: "Your details have been saved." });
+    
+    toast({ title: "Profile Updated", description: "Your details and service history have been saved." });
   };
 
   const requestNotifications = async () => {
@@ -54,7 +70,6 @@ export default function SettingsPage() {
       return;
     }
 
-    // Unified format for Master Export
     const headers = [
       "Category", 
       "Date", 
@@ -85,13 +100,12 @@ export default function SettingsPage() {
       "Tractor Loan Repayment", 
       "1", 
       l.amount, 
-      "0", // Loans aren't "revenue"
       "0", 
-      `-${l.amount}`, // Represent as outflow in profit context
+      "0", 
+      `-${l.amount}`, 
       l.mpesaCode
     ]);
 
-    // Combine and sort by date descending
     const combinedRows = [...opRows, ...loanRows].sort((a, b) => 
       new Date(b[1] as string).getTime() - new Date(a[1] as string).getTime()
     );
@@ -137,7 +151,7 @@ export default function SettingsPage() {
               <UserCircle className="w-5 h-5 text-primary" />
               Owner Profile
             </CardTitle>
-            <CardDescription>Required to enable logging features.</CardDescription>
+            <CardDescription>Update your tractor and contact details.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
@@ -168,7 +182,41 @@ export default function SettingsPage() {
                   <Input id="reRate" type="number" value={repaymentRate} onChange={(e) => setRepaymentRate(e.target.value)} />
                 </div>
               </div>
-              <Button type="submit" className="w-full">Update Profile</Button>
+
+              <div className="pt-4 border-t space-y-4">
+                <h3 className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Service History
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Last Service Done</Label>
+                    <Select value={lastServiceType} onValueChange={(v) => setLastServiceType(v as ServiceType)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Minor">Minor Service</SelectItem>
+                        <SelectItem value="Major">Major Service</SelectItem>
+                        <SelectItem value="Annual">Annual Service</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastServiceHours">Hours @ Last Service</Label>
+                    <Input 
+                      id="lastServiceHours" 
+                      type="number" 
+                      step="0.1" 
+                      placeholder="0.0" 
+                      value={lastServiceHours} 
+                      onChange={(e) => setLastServiceHours(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full">Update Profile & History</Button>
             </form>
           </CardContent>
         </Card>

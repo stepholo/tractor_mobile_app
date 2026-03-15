@@ -1,7 +1,18 @@
 
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 
-export async function exportToCsv(filename: string, headers: string[], rows: any[][], metaInfo?: string[][]) {
+export type ExportResult = {
+  filename: string;
+  uri?: string;
+  directory?: Directory;
+};
+
+export async function exportToCsv(
+  filename: string,
+  headers: string[],
+  rows: any[][],
+  metaInfo?: string[][]
+): Promise<ExportResult> {
   const metaContent = metaInfo ? metaInfo.map(e => e.join(",")).join("\n") + "\n\n" : "";
   const csvContent = metaContent + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
 
@@ -16,6 +27,7 @@ export async function exportToCsv(filename: string, headers: string[], rows: any
   document.body.removeChild(link);
 
   // Capacitor Download (Android/iOS)
+  let uri: string | undefined;
   try {
     await Filesystem.writeFile({
       path: filename,
@@ -23,7 +35,19 @@ export async function exportToCsv(filename: string, headers: string[], rows: any
       directory: Directory.Documents,
       encoding: Encoding.UTF8,
     });
+
+    const uriResult = await Filesystem.getUri({
+      path: filename,
+      directory: Directory.Documents,
+    });
+    uri = uriResult.uri;
   } catch (e) {
     console.error("Capacitor export failed", e);
   }
+
+  return {
+    filename,
+    uri,
+    directory: Directory.Documents,
+  };
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useTractorData, TractorModel, ServiceType, SERVICE_CYCLE } from "@/app/lib/store";
@@ -9,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Trash2, Smartphone, Bell, ShieldCheck, UserCircle, FileSpreadsheet, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Filesystem, Directory } from '@capacitor/filesystem';
 import { useState, useEffect } from "react";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { exportToCsv } from "@/app/lib/export";
@@ -122,8 +120,24 @@ export default function SettingsPage() {
     toast({ title: "Master Export Complete" });
   };
 
+  const requestNotifications = async () => {
+    try {
+      let perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== 'granted') {
+        perm = await LocalNotifications.requestPermissions();
+      }
+      if (perm.display === 'granted') {
+        toast({ title: "Notifications Enabled", description: "You'll receive service alerts." });
+      } else {
+        toast({ title: "Permission Denied", description: "Notifications are disabled.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to request notification permissions.", variant: "destructive" });
+    }
+  };
+
   const resetAllData = () => {
-    if (confirm("DANGER: This will delete everything permanently. Continue?")) {
+    if (confirm("Are you sure you want to delete all data? This cannot be undone.")) {
       localStorage.clear();
       window.location.reload();
     }
@@ -253,7 +267,7 @@ export default function SettingsPage() {
             <CardDescription className="text-gray-400">Export all operations AND loan payments to a single CSV file for full backup.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button variant="outline" className="w-full text-white border-white/20 h-12" onClick={handleFullExport}>
+            <Button variant="outline" className="w-full text-white border-white/20 h-12" onClick={exportToExcel}>
               <FileSpreadsheet className="w-5 h-5 mr-2" />
               Download Full History
             </Button>

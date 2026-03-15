@@ -43,3 +43,8 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+Android build output
+/android/app/build
+android/.gradle
+android/capacitor-cordova-android-plugins

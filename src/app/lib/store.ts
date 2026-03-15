@@ -8,8 +8,20 @@ export type ServiceType = 'Minor' | 'Major' | 'Annual';
 export type TractorModel = 'NEW HOLLAND' | 'CASE IH' | 'JOHN DEERE' | 'ZETOR' | 'OTHER';
 
 export const SERVICE_CYCLE: ServiceType[] = ['Minor', 'Major', 'Minor', 'Annual'];
-export const SERVICE_INTERVAL = 250;
 export const ALERT_THRESHOLD = 50;
+
+export function getServiceInterval(model: TractorModel) {
+  switch (model) {
+    case 'NEW HOLLAND':
+    case 'CASE IH':
+    case 'ZETOR':
+      return 300;
+    case 'JOHN DEERE':
+      return 250;
+    default:
+      return 250;
+  }
+}
 
 export interface UserProfile {
   name: string;
@@ -131,32 +143,44 @@ export function useTractorData() {
     setIsLoaded(true);
   }, []);
 
-  const checkServiceAlert = useCallback(async (currentHours: number, lastService: number) => {
-    const diff = currentHours - lastService;
-    const remaining = SERVICE_INTERVAL - diff;
+  const checkServiceAlert = useCallback(
+    async (
+      currentHours: number,
+      lastService: number,
+      model: TractorModel = service.tractorModel
+    ) => {
+      const interval = getServiceInterval(model);
+      const diff = currentHours - lastService;
+      const remaining = interval - diff;
 
-    if (remaining <= ALERT_THRESHOLD && remaining > 0) {
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            title: "Tractor Service Due Soon",
-            body: `Your tractor is approaching its 250hr service mark. Only ${remaining.toFixed(1)} hours remaining.`,
-            id: 1,
-            schedule: { at: new Date(Date.now() + 1000) },
-            sound: 'default',
-            attachments: [],
-            actionTypeId: "",
-            extra: null
-          }
-        ]
-      });
-    }
-  }, []);
+      if (remaining <= ALERT_THRESHOLD && remaining > 0) {
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              title: "Tractor Service Due Soon",
+              body: `Your tractor is approaching its ${interval}hr service mark. Only ${remaining.toFixed(1)} hours remaining.`,
+              id: 1,
+              schedule: { at: new Date(Date.now() + 1000) },
+              sound: 'default',
+              attachments: [],
+              actionTypeId: "",
+              extra: null
+            }
+          ]
+        });
+      }
+    },
+    [service.tractorModel]
+  );
 
   const updateService = (newService: ServiceState) => {
     setService(newService);
     localStorage.setItem(STORAGE_KEY_SERVICE, JSON.stringify(newService));
-    checkServiceAlert(newService.currentEngineHours, newService.lastServiceHours);
+    checkServiceAlert(
+      newService.currentEngineHours,
+      newService.lastServiceHours,
+      newService.tractorModel
+    );
   };
 
   const saveOperations = (newOps: Operation[]) => {
@@ -179,11 +203,11 @@ export function useTractorData() {
     const profileToSave = { ...newProfile, isOnboarded: true };
     setProfile(profileToSave);
     localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(profileToSave));
-    
-    const serviceUpdate = { 
-      ...service, 
+
+    const serviceUpdate = {
+      ...service,
       tractorModel: newProfile.tractorModel,
-      ...initialService 
+      ...initialService
     };
     updateService(serviceUpdate);
   };
@@ -193,7 +217,7 @@ export function useTractorData() {
     const totalRevenueCollected = (op.farmerRate || 0) * (op.acres || 0);
     const totalExpenses = (op.fuelCost || 0) + (op.laborCost || 0) + (op.repairCost || 0) + totalRentalFee;
     const netProfit = totalRevenueCollected - totalExpenses;
-    
+
     const fullOp: Operation = {
       ...op,
       id: crypto.randomUUID(),

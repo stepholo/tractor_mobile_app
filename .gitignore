@@ -48,3 +48,5 @@ Android build output
 /android/app/build
 android/.gradle
 android/capacitor-cordova-android-plugins
+ios/
+my-release-key.keystore

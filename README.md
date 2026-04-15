@@ -198,14 +198,14 @@ TypeScript errors ignored (use npm run typecheck separately)
 Mobile app identifier: com.github.stepholo.tractor_mobile_app Web directory: out/ (generated from Next.js build)
 
 ## 📈 Roadmap
- Offline Support: Sync operations when connection restored
- GPS Integration: Auto-track location of operations
- Photo Capture: Attach photos to operations
- Invoice Generation: Create billing from operations
- Multi-language: Support for Swahili and other languages
- Advanced Analytics: Predictive maintenance, ROI analysis
- Team Collaboration: Share operations with workers
- Payment Integration: Direct payment via M-Pesa
+ - Offline Support: Sync operations when connection restored
+ - GPS Integration: Auto-track location of operations
+ - Photo Capture: Attach photos to operations
+ - Invoice Generation: Create billing from operations
+ - Multi-language: Support for Swahili and other languages
+ - Advanced Analytics: Predictive maintenance, ROI analysis
+ - Team Collaboration: Share operations with workers
+ - Payment Integration: Direct payment via M-Pesa
 
 ### 📄 License
 This project is open source. See LICENSE file for details.

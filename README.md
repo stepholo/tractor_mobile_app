@@ -213,11 +213,11 @@ This project is open source. See LICENSE file for details.
 ### 👥 Contributing
 Contributions are welcome! Please:
 
-Fork the repository
-Create a feature branch (git checkout -b feature/amazing-feature)
-Commit changes (git commit -m 'Add amazing feature')
-Push to branch (git push origin feature/amazing-feature)
-Open a Pull Request
+- Fork the repository
+- Create a feature branch (git checkout -b feature/amazing-feature)
+- Commit changes (git commit -m 'Add amazing feature')
+- Push to branch (git push origin feature/amazing-feature)
+- Open a Pull Request
 
 ### 📧 Support
 For issues, questions, or feedback:
